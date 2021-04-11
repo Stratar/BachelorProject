@@ -1,0 +1,300 @@
+{
+  "build": "ha44fe06_2",
+  "build_number": 2,
+  "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+  "constrains": [],
+  "depends": [
+    "libgcc-ng >=4.9",
+    "libgfortran >=3.0"
+  ],
+  "extracted_package_dir": "/home/sm/anaconda3/pkgs/lapack-3.6.1-ha44fe06_2",
+  "features": "",
+  "files": [
+    "include/cblas.h",
+    "include/cblas_f77.h",
+    "include/cblas_mangling.h",
+    "include/cblas_test.h",
+    "include/lapacke.h",
+    "include/lapacke_config.h",
+    "include/lapacke_mangling.h",
+    "include/lapacke_utils.h",
+    "lib/cmake/cblas-3.6.1/cblas-config-version.cmake",
+    "lib/cmake/cblas-3.6.1/cblas-config.cmake",
+    "lib/cmake/cblas-3.6.1/cblas-targets-noconfig.cmake",
+    "lib/cmake/cblas-3.6.1/cblas-targets.cmake",
+    "lib/cmake/lapack-3.6.1/lapack-config-version.cmake",
+    "lib/cmake/lapack-3.6.1/lapack-config.cmake",
+    "lib/cmake/lapack-3.6.1/lapack-targets-noconfig.cmake",
+    "lib/cmake/lapack-3.6.1/lapack-targets.cmake",
+    "lib/cmake/lapacke-3.6.1/lapacke-config-version.cmake",
+    "lib/cmake/lapacke-3.6.1/lapacke-config.cmake",
+    "lib/cmake/lapacke-3.6.1/lapacke-targets-noconfig.cmake",
+    "lib/cmake/lapacke-3.6.1/lapacke-targets.cmake",
+    "lib/libblas.so",
+    "lib/libblas.so.3",
+    "lib/libblas.so.3.6.1",
+    "lib/libcblas.so",
+    "lib/liblapack.so",
+    "lib/liblapack.so.3",
+    "lib/liblapack.so.3.6.1",
+    "lib/liblapacke.so",
+    "lib/libtmglib.so",
+    "lib/pkgconfig/blas.pc",
+    "lib/pkgconfig/cblas.pc",
+    "lib/pkgconfig/lapack.pc",
+    "lib/pkgconfig/lapacke.pc"
+  ],
+  "fn": "lapack-3.6.1-ha44fe06_2.tar.bz2",
+  "license": "BSD 3-Clause",
+  "link": {
+    "source": "/home/sm/anaconda3/pkgs/lapack-3.6.1-ha44fe06_2",
+    "type": 1
+  },
+  "md5": "c343dd5510ec9733f3175a6cfb503786",
+  "name": "lapack",
+  "package_tarball_full_path": "/home/sm/anaconda3/pkgs/lapack-3.6.1-ha44fe06_2.tar.bz2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "include/cblas.h",
+        "path_type": "hardlink",
+        "sha256": "a058d9c036811b19b6e74b8ff0059ef471bd63d274ba6cef654c4ff71b1d4f0e",
+        "sha256_in_prefix": "a058d9c036811b19b6e74b8ff0059ef471bd63d274ba6cef654c4ff71b1d4f0e",
+        "size_in_bytes": 29942
+      },
+      {
+        "_path": "include/cblas_f77.h",
+        "path_type": "hardlink",
+        "sha256": "0b67e3f07b377aa888012ca90519bcba9b02460ca585a55609619f1c7a7a1b00",
+        "sha256_in_prefix": "0b67e3f07b377aa888012ca90519bcba9b02460ca585a55609619f1c7a7a1b00",
+        "size_in_bytes": 21255
+      },
+      {
+        "_path": "include/cblas_mangling.h",
+        "path_type": "hardlink",
+        "sha256": "360f938651695396561760421bc2f812462606fa49de116fa3b4f30a329d538c",
+        "sha256_in_prefix": "360f938651695396561760421bc2f812462606fa49de116fa3b4f30a329d538c",
+        "size_in_bytes": 542
+      },
+      {
+        "_path": "include/cblas_test.h",
+        "path_type": "hardlink",
+        "sha256": "abcb680f7060a7c502975b6232efe2f6a5570d5bf2baa8ef5ca0b9c405517f3f",
+        "sha256_in_prefix": "abcb680f7060a7c502975b6232efe2f6a5570d5bf2baa8ef5ca0b9c405517f3f",
+        "size_in_bytes": 8051
+      },
+      {
+        "_path": "include/lapacke.h",
+        "path_type": "hardlink",
+        "sha256": "c336dbc2ea29ef86ea6b0fc85ec036b04384b7de7a0ff78db377150dde55f3bc",
+        "sha256_in_prefix": "c336dbc2ea29ef86ea6b0fc85ec036b04384b7de7a0ff78db377150dde55f3bc",
+        "size_in_bytes": 1144647
+      },
+      {
+        "_path": "include/lapacke_config.h",
+        "path_type": "hardlink",
+        "sha256": "2ff1975925f93c62dfce5a9ae6aa76d40dbc3b5beb3567fbf8d7f357bfb7fa2e",
+        "sha256_in_prefix": "2ff1975925f93c62dfce5a9ae6aa76d40dbc3b5beb3567fbf8d7f357bfb7fa2e",
+        "size_in_bytes": 4236
+      },
+      {
+        "_path": "include/lapacke_mangling.h",
+        "path_type": "hardlink",
+        "sha256": "aed4772ddd94c8ec82b93155e15026badf0cc8b156baa085e1543d9c085077eb",
+        "sha256_in_prefix": "aed4772ddd94c8ec82b93155e15026badf0cc8b156baa085e1543d9c085077eb",
+        "size_in_bytes": 560
+      },
+      {
+        "_path": "include/lapacke_utils.h",
+        "path_type": "hardlink",
+        "sha256": "c78943d31c047cc66ffe2e317e46f9aeeca6343723c4b7045c1bc7b49b7205b9",
+        "sha256_in_prefix": "c78943d31c047cc66ffe2e317e46f9aeeca6343723c4b7045c1bc7b49b7205b9",
+        "size_in_bytes": 33161
+      },
+      {
+        "_path": "lib/cmake/cblas-3.6.1/cblas-config-version.cmake",
+        "path_type": "hardlink",
+        "sha256": "ec4a7183f44b208f30299773b35e232df381eae3a66ac5e3c40d5b8dfa647892",
+        "sha256_in_prefix": "ec4a7183f44b208f30299773b35e232df381eae3a66ac5e3c40d5b8dfa647892",
+        "size_in_bytes": 247
+      },
+      {
+        "_path": "lib/cmake/cblas-3.6.1/cblas-config.cmake",
+        "path_type": "hardlink",
+        "sha256": "bbb0537d1bd2ff7cd3d1a2aca433a0c49b853604834348841fee5e60fecea1f9",
+        "sha256_in_prefix": "bbb0537d1bd2ff7cd3d1a2aca433a0c49b853604834348841fee5e60fecea1f9",
+        "size_in_bytes": 792
+      },
+      {
+        "_path": "lib/cmake/cblas-3.6.1/cblas-targets-noconfig.cmake",
+        "path_type": "hardlink",
+        "sha256": "f553bf183bc3b5bcb7843caa0de6076f1e28786d1d309b4e46923b770ee00db0",
+        "sha256_in_prefix": "f553bf183bc3b5bcb7843caa0de6076f1e28786d1d309b4e46923b770ee00db0",
+        "size_in_bytes": 796
+      },
+      {
+        "_path": "lib/cmake/cblas-3.6.1/cblas-targets.cmake",
+        "path_type": "hardlink",
+        "sha256": "68be082bed46efb5517004634268a901b9320154448ceb0e8883ce048c7bb76a",
+        "sha256_in_prefix": "68be082bed46efb5517004634268a901b9320154448ceb0e8883ce048c7bb76a",
+        "size_in_bytes": 3890
+      },
+      {
+        "_path": "lib/cmake/lapack-3.6.1/lapack-config-version.cmake",
+        "path_type": "hardlink",
+        "sha256": "5df93ad9fa89b2aff50ed36a4c24237d0dda06d36902fe0f4b535637a881a2df",
+        "sha256_in_prefix": "5df93ad9fa89b2aff50ed36a4c24237d0dda06d36902fe0f4b535637a881a2df",
+        "size_in_bytes": 1607
+      },
+      {
+        "_path": "lib/cmake/lapack-3.6.1/lapack-config.cmake",
+        "path_type": "hardlink",
+        "sha256": "8ef90c7a95542e467f701dcb9344df4d4951af1d4a621e7640ebda73a33d41f4",
+        "sha256_in_prefix": "8ef90c7a95542e467f701dcb9344df4d4951af1d4a621e7640ebda73a33d41f4",
+        "size_in_bytes": 521
+      },
+      {
+        "_path": "lib/cmake/lapack-3.6.1/lapack-targets-noconfig.cmake",
+        "path_type": "hardlink",
+        "sha256": "d356403dae9328e420ca06e0056d18aba37e7a807b29b2ecb864133f941d5c8b",
+        "sha256_in_prefix": "d356403dae9328e420ca06e0056d18aba37e7a807b29b2ecb864133f941d5c8b",
+        "size_in_bytes": 1674
+      },
+      {
+        "_path": "lib/cmake/lapack-3.6.1/lapack-targets.cmake",
+        "path_type": "hardlink",
+        "sha256": "feaecca7b968ef06448f21f0cc842d0a74df88aeb496683a5a757212c02d207b",
+        "sha256_in_prefix": "feaecca7b968ef06448f21f0cc842d0a74df88aeb496683a5a757212c02d207b",
+        "size_in_bytes": 3263
+      },
+      {
+        "_path": "lib/cmake/lapacke-3.6.1/lapacke-config-version.cmake",
+        "path_type": "hardlink",
+        "sha256": "ec4a7183f44b208f30299773b35e232df381eae3a66ac5e3c40d5b8dfa647892",
+        "sha256_in_prefix": "ec4a7183f44b208f30299773b35e232df381eae3a66ac5e3c40d5b8dfa647892",
+        "size_in_bytes": 247
+      },
+      {
+        "_path": "lib/cmake/lapacke-3.6.1/lapacke-config.cmake",
+        "path_type": "hardlink",
+        "sha256": "2bcf96ad47540cd620feeeeadf64152b5396232ba4af4630b7bb064ae5af3745",
+        "sha256_in_prefix": "2bcf96ad47540cd620feeeeadf64152b5396232ba4af4630b7bb064ae5af3745",
+        "size_in_bytes": 826
+      },
+      {
+        "_path": "lib/cmake/lapacke-3.6.1/lapacke-targets-noconfig.cmake",
+        "path_type": "hardlink",
+        "sha256": "bf5ee57c79dfdd3ee38761fc84647fe566b69c8b0904462f9be9a727c9f113a0",
+        "sha256_in_prefix": "bf5ee57c79dfdd3ee38761fc84647fe566b69c8b0904462f9be9a727c9f113a0",
+        "size_in_bytes": 819
+      },
+      {
+        "_path": "lib/cmake/lapacke-3.6.1/lapacke-targets.cmake",
+        "path_type": "hardlink",
+        "sha256": "a832c74a810ce0157fa122bc692662650ad9d8d3f57fd56e267b7a323eedf11f",
+        "sha256_in_prefix": "a832c74a810ce0157fa122bc692662650ad9d8d3f57fd56e267b7a323eedf11f",
+        "size_in_bytes": 3907
+      },
+      {
+        "_path": "lib/libblas.so",
+        "path_type": "softlink",
+        "sha256": "f6d8b673b8618e9c1450b2ef5da5fcdf23e16be54f9d5c922c4fde323f29ee3c",
+        "size_in_bytes": 542406
+      },
+      {
+        "_path": "lib/libblas.so.3",
+        "path_type": "softlink",
+        "sha256": "f6d8b673b8618e9c1450b2ef5da5fcdf23e16be54f9d5c922c4fde323f29ee3c",
+        "size_in_bytes": 542406
+      },
+      {
+        "_path": "lib/libblas.so.3.6.1",
+        "path_type": "hardlink",
+        "sha256": "f6d8b673b8618e9c1450b2ef5da5fcdf23e16be54f9d5c922c4fde323f29ee3c",
+        "sha256_in_prefix": "f6d8b673b8618e9c1450b2ef5da5fcdf23e16be54f9d5c922c4fde323f29ee3c",
+        "size_in_bytes": 542406
+      },
+      {
+        "_path": "lib/libcblas.so",
+        "path_type": "hardlink",
+        "sha256": "d3f510eb5c8c40aaaa5fb95d42c32e80273a3259acb74515bbbb276b787a137d",
+        "sha256_in_prefix": "d3f510eb5c8c40aaaa5fb95d42c32e80273a3259acb74515bbbb276b787a137d",
+        "size_in_bytes": 145789
+      },
+      {
+        "_path": "lib/liblapack.so",
+        "path_type": "softlink",
+        "sha256": "9eeb3ae603e7d1ce42ecc948e1380e268bd8e6fdb366c2cd8f8411756caae310",
+        "size_in_bytes": 8250510
+      },
+      {
+        "_path": "lib/liblapack.so.3",
+        "path_type": "softlink",
+        "sha256": "9eeb3ae603e7d1ce42ecc948e1380e268bd8e6fdb366c2cd8f8411756caae310",
+        "size_in_bytes": 8250510
+      },
+      {
+        "_path": "lib/liblapack.so.3.6.1",
+        "path_type": "hardlink",
+        "sha256": "9eeb3ae603e7d1ce42ecc948e1380e268bd8e6fdb366c2cd8f8411756caae310",
+        "sha256_in_prefix": "9eeb3ae603e7d1ce42ecc948e1380e268bd8e6fdb366c2cd8f8411756caae310",
+        "size_in_bytes": 8250510
+      },
+      {
+        "_path": "lib/liblapacke.so",
+        "path_type": "hardlink",
+        "sha256": "9ffe82d91b2e408bf97cec5c44fe65a1057fb607db48295a472bd8c33f4a38f1",
+        "sha256_in_prefix": "9ffe82d91b2e408bf97cec5c44fe65a1057fb607db48295a472bd8c33f4a38f1",
+        "size_in_bytes": 1950145
+      },
+      {
+        "_path": "lib/libtmglib.so",
+        "path_type": "hardlink",
+        "sha256": "ee49a9955e799a90fad8e5898a587026dec7fc8d92ca7e393eafe11aac4fee1e",
+        "sha256_in_prefix": "ee49a9955e799a90fad8e5898a587026dec7fc8d92ca7e393eafe11aac4fee1e",
+        "size_in_bytes": 478777
+      },
+      {
+        "_path": "lib/pkgconfig/blas.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/opt/anaconda1anaconda2anaconda3",
+        "sha256": "5c7246ce7f0cb312ca6eaf9f199c9e123e4525c1369cc6df0a058d820aeb7fbb",
+        "sha256_in_prefix": "ee340870b840b77ed6ce1de07c8bc26c1cf0f1d2807656c4f610a85abc24c970",
+        "size_in_bytes": 290
+      },
+      {
+        "_path": "lib/pkgconfig/cblas.pc",
+        "path_type": "hardlink",
+        "sha256": "b83e67980c2a96cd51ccf9452e0d4db64a224bd8a933250617476639441dd916",
+        "sha256_in_prefix": "b83e67980c2a96cd51ccf9452e0d4db64a224bd8a933250617476639441dd916",
+        "size_in_bytes": 178
+      },
+      {
+        "_path": "lib/pkgconfig/lapack.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/opt/anaconda1anaconda2anaconda3",
+        "sha256": "a09174195fd10b367f01fb355bb06e6a29b83500a6795ba70b45b2b58f570d52",
+        "sha256_in_prefix": "66a5793da474f86e7b2ef6603515dd2cf823abb2031954c98b0639e1cc0306c0",
+        "size_in_bytes": 296
+      },
+      {
+        "_path": "lib/pkgconfig/lapacke.pc",
+        "path_type": "hardlink",
+        "sha256": "b719752d9a74657a3b19af43e769c710702261f1f2676467719588d18b215875",
+        "sha256_in_prefix": "b719752d9a74657a3b19af43e769c710702261f1f2676467719588d18b215875",
+        "size_in_bytes": 189
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "lapack==3.6.1=ha44fe06_2",
+  "sha256": "4193271f4219cbbf30576a72f95287f11e4806827352bc14e742659734f0aac6",
+  "size": 2380636,
+  "subdir": "linux-64",
+  "timestamp": 1545692580505,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/conda-forge/linux-64/lapack-3.6.1-ha44fe06_2.tar.bz2",
+  "version": "3.6.1"
+}

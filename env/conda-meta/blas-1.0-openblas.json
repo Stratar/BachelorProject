@@ -1,0 +1,32 @@
+{
+  "build": "openblas",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+  "constrains": [],
+  "depends": [
+    "openblas"
+  ],
+  "extracted_package_dir": "/home/sm/anaconda3/pkgs/blas-1.0-openblas",
+  "features": "",
+  "files": [],
+  "fn": "blas-1.0-openblas.tar.bz2",
+  "license": "BSD 3-clause",
+  "link": {
+    "source": "/home/sm/anaconda3/pkgs/blas-1.0-openblas",
+    "type": 1
+  },
+  "md5": "42a71362487be2e64f2285bc26b39618",
+  "name": "blas",
+  "package_tarball_full_path": "/home/sm/anaconda3/pkgs/blas-1.0-openblas.tar.bz2",
+  "paths_data": {
+    "paths": [],
+    "paths_version": 1
+  },
+  "requested_spec": "blas==1.0=openblas",
+  "sha256": "9dd99eda47f74a222a8535f50541b01af8df77f58349ae3a5fd6e1e676f4c2b2",
+  "size": 1257,
+  "subdir": "linux-64",
+  "track_features": "blas_openblas",
+  "url": "https://conda.anaconda.org/conda-forge/linux-64/blas-1.0-openblas.tar.bz2",
+  "version": "1.0"
+}

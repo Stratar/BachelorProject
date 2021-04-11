@@ -1,0 +1,10 @@
+prefix=/home/sm/Documents/Stratos_18122020/env/simbody
+libdir=${prefix}/lib
+includedir=${prefix}/include/simbody
+
+Name: simbody
+Description: Simbody Libraries
+Version: 3.6
+Requires:
+Libs: -L${libdir} -lSimTKsimbody -lSimTKmath -lSimTKcommon -llapack -lblas -lpthread -lrt -ldl -lm
+CFlags: -I${includedir}

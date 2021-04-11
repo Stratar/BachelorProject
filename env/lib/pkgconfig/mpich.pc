@@ -1,0 +1,20 @@
+# this gives access to the mpich header files
+prefix=/home/sm/Documents/Stratos_18122020/env
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: mpich
+Description: High Performance and portable MPI
+Version: 3.3.2
+URL: http://www.mcs.anl.gov/research/projects/mpich
+Requires:
+Libs:  -L/home/sm/Documents/Stratos_18122020/env/lib -Wl,-rpath,/home/sm/Documents/Stratos_18122020/env/lib -L${libdir} -lmpi  -lm   -lpthread  -lrt 
+Cflags: -I/home/sm/Documents/Stratos_18122020/env/include -I/home/sm/Documents/Stratos_18122020/env/include -I${includedir}
+
+# pkg-config does not understand Cxxflags, etc. So we allow users to
+# query them using the --variable option
+
+cxxflags=-I/home/sm/Documents/Stratos_18122020/env/include -I/home/sm/Documents/Stratos_18122020/env/include -I${includedir}
+fflags=-I/home/sm/Documents/Stratos_18122020/env/include -I${includedir}
+fcflags=-I/home/sm/Documents/Stratos_18122020/env/include -I${includedir}

@@ -1,0 +1,4 @@
+[http]
+	sslVerify = true
+	sslCAPath = /home/sm/Documents/Stratos_18122020/env/ssl/cacert.pem
+	sslCAInfo = /home/sm/Documents/Stratos_18122020/env/ssl/cacert.pem

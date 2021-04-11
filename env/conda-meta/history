@@ -1,0 +1,50 @@
+==> 2021-02-03 11:30:53 <==
+# cmd: /home/sm/anaconda3/bin/conda-env update --prefix ./env --file opensim.yml --prune
+# conda version: 4.8.3
++conda-forge/linux-64::_libgcc_mutex-0.1-main
++conda-forge/linux-64::blas-1.0-openblas
++conda-forge/linux-64::c-ares-1.16.1-h516909a_0
++conda-forge/linux-64::curl-7.71.1-he644dc0_4
++conda-forge/linux-64::expat-2.2.9-he1b5a44_2
++conda-forge/linux-64::gettext-0.19.8.1-h5e8e0c9_1
++conda-forge/linux-64::git-2.28.0-pl526h5e3e691_1
++conda-forge/linux-64::krb5-1.17.1-hfafb76e_2
++conda-forge/linux-64::lapack-3.6.1-ha44fe06_2
++conda-forge/linux-64::ld_impl_linux-64-2.33.1-h53a641e_7
++conda-forge/linux-64::libcurl-7.71.1-hcdd3856_4
++conda-forge/linux-64::libev-4.33-h516909a_0
++conda-forge/linux-64::libgfortran-3.0.0-1
++conda-forge/linux-64::libiconv-1.15-h516909a_1006
++conda-forge/linux-64::libnghttp2-1.41.0-hab1572f_1
++conda-forge/linux-64::libssh2-1.9.0-hab1572f_5
++conda-forge/linux-64::mpi-1.0-mpich
++conda-forge/linux-64::mpich-3.3.2-hc856adb_0
++conda-forge/linux-64::pcre-8.44-he1b5a44_0
++conda-forge/linux-64::perl-5.26.2-h516909a_1006
++conda-forge/linux-64::python_abi-3.6-1_cp36m
++conda-forge/linux-64::wheel-0.34.2-py36_0
++defaults/linux-64::ca-certificates-2020.6.24-0
++defaults/linux-64::certifi-2020.6.20-py36_0
++defaults/linux-64::libedit-3.1.20191231-h14c3975_1
++defaults/linux-64::libffi-3.3-he6710b0_2
++defaults/linux-64::libgcc-ng-9.1.0-hdf63c60_0
++defaults/linux-64::libgfortran-ng-7.3.0-hdf63c60_0
++defaults/linux-64::libopenblas-0.3.10-h5a2b251_0
++defaults/linux-64::libstdcxx-ng-9.1.0-hdf63c60_0
++defaults/linux-64::mpi4py-3.0.3-py36h028fd6f_0
++defaults/linux-64::ncurses-6.2-he6710b0_1
++defaults/linux-64::nomkl-3.0-0
++defaults/linux-64::openblas-0.3.10-0
++defaults/linux-64::openblas-devel-0.3.10-0
++defaults/linux-64::openssl-1.1.1g-h7b6447c_0
++defaults/linux-64::pip-20.2.2-py36_0
++defaults/linux-64::python-3.6.10-h7579374_2
++defaults/linux-64::readline-8.0-h7b6447c_0
++defaults/linux-64::setuptools-49.2.0-py36_0
++defaults/linux-64::sqlite-3.32.3-h62c20be_0
++defaults/linux-64::tk-8.6.10-hbc83047_0
++defaults/linux-64::xz-5.2.5-h7b6447c_0
++defaults/linux-64::zlib-1.2.11-h7b6447c_3
++kidzik/linux-64::freeglut-3.0.0-4
++kidzik/linux-64::opensim-4.0.0-py36_17
+# update specs: ['freeglut==3.0.0=4', 'mpi==1.0=mpich', 'libgfortran==3.0.0=1', '_libgcc_mutex==0.1=main', 'ca-certificates==2020.6.24=0', 'curl==7.71.1=he644dc0_4', 'gettext==0.19.8.1=h5e8e0c9_1', 'mpi4py==3.0.3=py36h028fd6f_0', 'libiconv==1.15=h516909a_1006', 'openssl==1.1.1g=h7b6447c_0', 'libcurl==7.71.1=hcdd3856_4', 'perl==5.26.2=h516909a_1006', 'pip==20.2.2=py36_0', 'tk==8.6.10=hbc83047_0', 'libgcc-ng==9.1.0=hdf63c60_0', 'libev==4.33=h516909a_0', 'python==3.6.10=h7579374_2', 'zlib==1.2.11=h7b6447c_3', 'setuptools==49.2.0=py36_0', 'ld_impl_linux-64==2.33.1=h53a641e_7', 'sqlite==3.32.3=h62c20be_0', 'xz==5.2.5=h7b6447c_0', 'lapack==3.6.1=ha44fe06_2', 'git==2.28.0=pl526h5e3e691_1', 'openblas-devel==0.3.10=0', 'mpich==3.3.2=hc856adb_0', 'openblas==0.3.10=0', 'libnghttp2==1.41.0=hab1572f_1', 'expat==2.2.9=he1b5a44_2', 'libedit==3.1.20191231=h14c3975_1', 'libopenblas==0.3.10=h5a2b251_0', 'libssh2==1.9.0=hab1572f_5', 'nomkl==3.0=0', 'readline==8.0=h7b6447c_0', 'pcre==8.44=he1b5a44_0', 'wheel==0.34.2=py36_0', 'c-ares==1.16.1=h516909a_0', 'certifi==2020.6.20=py36_0', 'libffi==3.3=he6710b0_2', 'libgfortran-ng==7.3.0=hdf63c60_0', 'opensim==4.0.0=py36_17', 'krb5==1.17.1=hfafb76e_2', 'python_abi==3.6=1_cp36m', 'libstdcxx-ng==9.1.0=hdf63c60_0', 'blas==1.0=openblas', 'ncurses==6.2=he6710b0_1']
