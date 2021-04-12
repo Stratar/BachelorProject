@@ -152,7 +152,13 @@ class MLPCritic(nn.Module):
 
     def __init__(self, obs_dim, hidden_sizes, activation):
         super().__init__()
-        self.v_net = mlp([obs_dim] + list(hidden_sizes) + [1], activation)
+        self.v_net = nn.Sequential(
+                nn.Linear(obs_dim, hidden_sizes[0]),
+                nn.Tanh(),
+                nn.Linear(hidden_sizes[0], hidden_sizes[1]),
+                nn.Tanh(),
+                nn.Linear(hidden_sizes[1], 1)
+              ).float().to(device)
 
     def forward(self, obs):
         return torch.squeeze(self.v_net(obs), -1) # Critical to ensure v has right shape.
