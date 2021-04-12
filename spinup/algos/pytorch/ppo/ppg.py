@@ -213,14 +213,14 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     #env = env_fn()
 
     # Use this for OpenSim  
-    #env = ProstheticsEnvMulticlip(visualize=viz, model_file=model_file, integrator_accuracy=1e-2)
-    #obs_dim = env.observation_space.shape[0]
-    #act_dim = env.action_space.shape[0]
+    env = ProstheticsEnvMulticlip(visualize=viz, model_file=model_file, integrator_accuracy=1e-2)
+    obs_dim = env.observation_space.shape[0]
+    act_dim = env.action_space.shape[0]
     # Use this for gym
-    model_file = 'Pendulum-v0'
-    env = gym.make(model_file)
-    obs_dim = env.observation_space.shape
-    act_dim = env.action_space.shape
+    #model_file = 'Pendulum-v0'
+    #env = gym.make(model_file)
+    #obs_dim = env.observation_space.shape
+    #act_dim = env.action_space.shape
 
     # Create actor-critic module
     ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
@@ -385,9 +385,9 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     # Prepare for interaction with environment
     start_time = time.time()
     # Use this for gym
-    o, ep_ret, ep_len, true_reward = env.reset(), 0, 0, 0
+    #o, ep_ret, ep_len, true_reward = env.reset(), 0, 0, 0
     # Use this for OpenSim
-    #o, ep_ret, ep_len = env.reset(test=False), 0, 0
+    o, ep_ret, ep_len = env.reset(test=False), 0, 0
 
     base_path = os.path.dirname(os.path.abspath(__file__))
     # Main loop: collect experience in env and update/log each epoch
@@ -400,10 +400,10 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
             a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
 
             # Use this for OpenSim
-            #next_o, r, true_reward, d = env.step(a)
+            next_o, r, true_reward, d = env.step(a)
 
             # Use this for gym
-            next_o, r, d, _ = env.step(a)
+            #next_o, r, d, _ = env.step(a)
             ep_ret += r
             ep_len += 1
             ep_true += true_reward
@@ -438,11 +438,11 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                     episodes += 1
                 n_steps += ep_len
                 # Use this for OpenSim
-                #o, ep_ret, ep_len, true_reward = env.reset(test=False), 0, 0, 0
+                o, ep_ret, ep_len, true_reward = env.reset(test=False), 0, 0, 0
                 # Use this for gym
-                o, ep_ret, ep_len, true_reward = env.reset(), 0, 0, 0
+                #o, ep_ret, ep_len, true_reward = env.reset(), 0, 0, 0
 
-        logger.store(EpTrue=np.mean(true_arr))
+        logger.store(EpTrue=np.mean(true_arr), Episodes=episodes)
 
         # Save model
         '''if (epoch % save_freq == 0) or (epoch == epochs-1):
@@ -455,10 +455,10 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
 
         # Log info about epoch
         logger.log_tabular('Epoch', epoch)
-        #logger.log_tabular('EpRet', with_min_and_max=True)
+        logger.log_tabular('EpRet', with_min_and_max=True)
         logger.log_tabular('EpLen', average_only=True)
-        logger.log_tabular('VVals', with_min_and_max=True)
-        logger.log_tabular('TotalEnvInteracts', (epoch+1)*steps_per_epoch)
+        #logger.log_tabular('VVals', with_min_and_max=True)
+        #logger.log_tabular('TotalEnvInteracts', (epoch+1)*steps_per_epoch)
         logger.log_tabular('LossPi', average_only=True)
         logger.log_tabular('LossV', average_only=True)
         logger.log_tabular('DeltaLossPi', average_only=True)
@@ -467,6 +467,7 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                                 logger.log_tabular('KL', average_only=True)
                                 logger.log_tabular('ClipFrac', average_only=True)
                                 logger.log_tabular('StopIter', average_only=True)'''
+        logger.log_tabular('Episodes')
         logger.log_tabular('EpTrue', np.mean(true_arr))
         logger.log_tabular('EpTRew', average_only=True)
         logger.log_tabular('Time', time.time()-start_time)
@@ -528,7 +529,7 @@ if __name__ == '__main__':
     parser.add_argument('--l', type=int, default=2)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--seed', '-s', type=int, default=0)
-    parser.add_argument('--steps', type=int, default=4000)#4000#1536
+    parser.add_argument('--steps', type=int, default=1536)#4000#1536
     parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--exp_name', type=str, default='ppo')
     args = parser.parse_args()
