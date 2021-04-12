@@ -167,7 +167,8 @@ class MLPCritic(nn.Module):
         self.to(device)
 
     def forward(self, obs):
-        return torch.squeeze(self.v_net(obs), -1) # Critical to ensure v has right shape.
+        state = torch.tensor(obs, dtype=torch.float).to(device)
+        return torch.squeeze(self.v_net(state), -1) # Critical to ensure v has right shape.
 
 
 
