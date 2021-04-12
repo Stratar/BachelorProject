@@ -90,8 +90,13 @@ class PPOBuffer:
 
 
 def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
+<<<<<<< HEAD
         vf_lr=1e-3, train_pi_iters=4, train_v_iters=4, train_aux_iters=4, aux_iters=16, 
         lam=0.97, max_ep_len=1536, target_kl=0.01, logger_kwargs=dict(), save_freq=5, viz=False):
+=======
+        vf_lr=1e-3, train_pi_iters=40, train_v_iters=40, train_aux_iters=40, aux_iters=64, 
+        lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
+>>>>>>> b1c9cfd2fb66673afc6589afce7c3588fef4b6c9
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -211,12 +216,16 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     save_prefix = model_file[10:-5]
     # Instantiate environment
     #env = env_fn()
-    env = ProstheticsEnvMulticlip(visualize=viz, model_file=model_file, integrator_accuracy=1e-2)
-    #env = gym.make(model_file)
-    #obs_dim = env.observation_space.shape
-    #act_dim = env.action_space.shape
-    obs_dim = env.observation_space.shape[0]
-    act_dim = env.action_space.shape[0]
+
+    # Use this for OpenSim  
+    #env = ProstheticsEnvMulticlip(visualize=viz, model_file=model_file, integrator_accuracy=1e-2)
+    #obs_dim = env.observation_space.shape[0]
+    #act_dim = env.action_space.shape[0]
+    # Use this for gym
+    model_file = 'Pendulum-v0'
+    env = gym.make(model_file)
+    obs_dim = env.observation_space.shape
+    act_dim = env.action_space.shape
 
     # Create actor-critic module
     ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
@@ -232,33 +241,25 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
 
 
     def save_weights(save_epoch):
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        try:
-            os.mkdir(base_path+'/Trials')
-        except FileExistsError as e:
-            pass
-
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        policy_path = base_path + "/Trials/policy"+str(save_epoch)+".tar"
+        policy_path = save_epoch + "policy.tar"
         torch.save({
             'model_state_dict': ac.pi.state_dict(),
             'optimizer_state_dict': pi_optimizer.state_dict()
             }, policy_path)
         
-        value_path = base_path + "/Trials/value"+str(save_epoch)+".tar"
+        value_path = save_epoch + "value.tar"
         torch.save({
             'model_state_dict': ac.v.state_dict(),
             'optimizer_state_dict': vf_optimizer.state_dict()
             }, value_path)
         
     def load_weights(load_epoch):
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        policy_path = base_path + "/Trials/policy"+str(load_epoch)+".tar"
+        policy_path = load_epoch + "policy.tar"
         policy_checkpoint = torch.load(policy_path)
         ac.pi.load_state_dict(policy_checkpoint['model_state_dict'])
         pi_optimizer.load_state_dict(policy_checkpoint['optimizer_state_dict'])
 
-        value_path = base_path + "/Trials/value"+str(load_epoch)+".tar"
+        value_path = load_epoch + "value.tar"
         value_checkpoint = torch.load(value_path)
         ac.v.load_state_dict(value_checkpoint['model_state_dict'])
         vf_optimizer.load_state_dict(value_checkpoint['optimizer_state_dict'])
@@ -269,13 +270,13 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
         model_f = os.path.normpath(
             base_path + "/../../../../" + save_prefix + '/models/' + save_prefix + "_afterIter_" + str(
                 load_after_iters))    
-        load_weights(load_after_iters)
+        load_weights(model_f)
         # Restore the variables from file
         data = genfromtxt(save_prefix + '/test_afterIter_' + str(load_after_iters) + '.csv', delimiter=',')
         num_rows = sum(1 for row in data)
         for i in range(len(data)):
             data_vector = data[i]
-            total_episodes = int(data_vector[0])
+            episodes = int(data_vector[0])
             n_steps = int(data_vector[1])
             start_epoch = int(data_vector[2])
     # Sync params across processes
@@ -377,7 +378,10 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
 
     # Prepare for interaction with environment
     start_time = time.time()
-    o, ep_ret, ep_len = env.reset(test=False), 0, 0
+    # Use this for gym
+    o, ep_ret, ep_len, true_reward = env.reset(), 0, 0, 0
+    # Use this for OpenSim
+    #o, ep_ret, ep_len = env.reset(test=False), 0, 0
 
     base_path = os.path.dirname(os.path.abspath(__file__))
     # Main loop: collect experience in env and update/log each epoch
@@ -389,7 +393,11 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
         for t in range(local_steps_per_epoch):
             a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
 
-            next_o, r, true_reward, d = env.step(a)
+            # Use this for OpenSim
+            #next_o, r, true_reward, d = env.step(a)
+
+            # Use this for gym
+            next_o, r, d, _ = env.step(a)
             ep_ret += r
             ep_len += 1
             ep_true += true_reward
@@ -423,7 +431,10 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
 
                     episodes += 1
                 n_steps += ep_len
-                o, ep_ret, ep_len, true_reward = env.reset(test=False), 0, 0, 0
+                # Use this for OpenSim
+                #o, ep_ret, ep_len, true_reward = env.reset(test=False), 0, 0, 0
+                # Use this for gym
+                o, ep_ret, ep_len, true_reward = env.reset(), 0, 0, 0
 
         logger.store(EpTrue=np.mean(true_arr))
 
@@ -460,13 +471,13 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
             l = open(save_prefix + "/iterations.txt", "a+")
             m = open(save_prefix + "/timesteps.txt", "a+")                                                                  
             n = open(save_prefix + "/training_mean_truerewards.txt", "a+")                                                                  
-            #r = open(save_prefix + "/training_mean_rewards.txt", "a+")
+            r = open(save_prefix + "/training_mean_rewards.txt", "a+")
             
             n.write("Episode %d    " % episodes)
             n.write("Reward  %d\r\n" % np.mean(true_arr))
 
-            #r.write("Episode %d    " % episodes)
-            #r.write("Reward  %d\r\n" % np.mean(ret_arr))
+            r.write("Episode %d    " % episodes)
+            r.write("Reward  %d\r\n" % np.mean(ret_arr))
 
             #ALSO STORE THE TIMESTEPS SO IT CAN STOP AND RESTART PROPERLY
             if epoch % save_freq == 0:
@@ -477,18 +488,18 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
             l.close()
             m.close()
             n.close()
-            #r.close()
+            r.close()
             #It has been indented once
             if epoch % save_freq == 0:
             #if save_model_with_prefix:
                 base_path = os.path.dirname(os.path.abspath(__file__))
                 model_f = os.path.normpath(
-                    base_path + '/../../../' + save_prefix + '/models/' + save_prefix + "_afterIter_" + str(
+                    base_path + '/../../../../' + save_prefix + '/models/' + save_prefix + "_afterIter_" + str(
                         epoch))
                 #Use the model_f as destination location, so change the save_models()
                 #save_actor_model(model_f)
                 #save_critic_model(model_f)
-                save_weights(epoch)
+                save_weights(model_f)
                 logger.log("Saved model to file :{}".format(model_f))
                 if episodes < 100:
                     size = episodes
@@ -511,7 +522,7 @@ if __name__ == '__main__':
     parser.add_argument('--l', type=int, default=2)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--seed', '-s', type=int, default=0)
-    parser.add_argument('--steps', type=int, default=1536)
+    parser.add_argument('--steps', type=int, default=4000)#4000#1536
     parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--exp_name', type=str, default='ppo')
     args = parser.parse_args()
