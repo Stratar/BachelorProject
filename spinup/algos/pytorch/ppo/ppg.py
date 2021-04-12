@@ -12,7 +12,6 @@ from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
 from spinup.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class PPOBuffer:
@@ -224,7 +223,7 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     act_dim = env.action_space.shape
 
     # Create actor-critic module
-    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs).to(device)
+    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
 
     # Set up optimizers for policy and value function
     pi_optimizer = Adam(ac.pi.parameters(), lr=pi_lr)
@@ -291,6 +290,10 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     def compute_loss_pi(data):
         obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
 
+        obs = torch.tensor(obs, dtype=torch.float).to(device)
+        act = torch.tensor(act, dtype=torch.float).to(device)
+        adv = torch.tensor(adv, dtype=torch.float).to(device)
+        logp_old = torch.tensor(logp_old, dtype=torch.float).to(device)
         # Policy loss
         pi, logp, _ = ac.pi(obs, act)
         ratio = torch.exp(logp - logp_old)
@@ -357,6 +360,11 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     def compute_aux_loss(aux_data):
         #print(aux_data)
         obs, act, logp_old = aux_data['obs'], aux_data['act'], aux_data['logp']
+
+        obs = torch.tensor(obs, dtype=torch.float).to(device)
+        act = torch.tensor(act, dtype=torch.float).to(device)
+        logp_old = torch.tensor(logp_old, dtype=torch.float).to(device)
+
         ret = ac.v(obs)
         pi, logp, val = ac.pi(obs, act)
         aux_loss = ((ret - val)**2).mean()

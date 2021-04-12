@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def combined_shape(length, shape=None):
     if shape is None:
@@ -118,7 +119,7 @@ class MLPGaussianActor(Actor):
     def __init__(self, obs_dim, act_dim, hidden_sizes, activation):
         super().__init__()
         log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
-        self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+        self.log_std = torch.nn.Parameter(torch.as_tensor(log_std)).to(device)
 
         self.nn_layer = nn.Sequential(
                 nn.Linear(obs_dim, hidden_sizes[0]),
@@ -135,12 +136,13 @@ class MLPGaussianActor(Actor):
         self.critic_layer = nn.Sequential(
                 nn.Linear(hidden_sizes[1], 1)
               ).float()
+        self.to(device)
 
     def _distribution(self, obs):
         x = self.nn_layer(obs)
         mu = self.actor_layer(x)
         val = torch.squeeze(self.critic_layer(x), -1)
-        std = torch.exp(self.log_std)
+        std = torch.exp(self.log_std).to(device)
         return Normal(mu, std), val
 
     def _log_prob_from_distribution(self, pi, act):
@@ -162,6 +164,8 @@ class MLPCritic(nn.Module):
                 nn.Tanh(),
                 nn.Linear(hidden_sizes[1], 1)
               ).float()
+        self.to(device)
+
     def forward(self, obs):
         return torch.squeeze(self.v_net(obs), -1) # Critical to ensure v has right shape.
 
@@ -186,11 +190,12 @@ class MLPActorCritic(nn.Module):
         self.v  = MLPCritic(obs_dim, hidden_sizes, activation)
 
     def step(self, obs):
+        state = torch.tensor(obs, dtype=torch.float).to(device)
         with torch.no_grad():
-            pi, _ = self.pi._distribution(obs)
+            pi, _ = self.pi._distribution(state)
             a = pi.sample()
             logp_a = self.pi._log_prob_from_distribution(pi, a)
-            v = self.v(obs)
+            v = self.v(state)
         return a.numpy(), v.numpy(), logp_a.numpy()
 
     def act(self, obs):
