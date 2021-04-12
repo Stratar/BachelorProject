@@ -7,7 +7,6 @@ import torch.nn as nn
 from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  
 
 def combined_shape(length, shape=None):
     if shape is None:
@@ -126,16 +125,16 @@ class MLPGaussianActor(Actor):
                 nn.Tanh(),
                 nn.Linear(hidden_sizes[0], hidden_sizes[1]),
                 nn.Tanh()
-              ).float().to(device)
+              ).float()
 
         self.actor_layer = nn.Sequential(
                 nn.Linear(hidden_sizes[1], act_dim),
                 nn.Tanh()
-              ).float().to(device)
+              ).float()
 
         self.critic_layer = nn.Sequential(
                 nn.Linear(hidden_sizes[1], 1)
-              ).float().to(device)
+              ).float()
 
     def _distribution(self, obs):
         x = self.nn_layer(obs)
@@ -150,10 +149,10 @@ class MLPGaussianActor(Actor):
 
 class MLPCritic(nn.Module):
 
-'''    def __init__(self, obs_dim, hidden_sizes, activation):
+    '''    def __init__(self, obs_dim, hidden_sizes, activation):
         super().__init__()
         self.v_net = mlp([obs_dim] + list(hidden_sizes) + [1], activation)
-'''
+    '''
     def __init__(self, obs_dim, hidden_sizes, activation):
         super().__init__()
         self.v_net = nn.Sequential(
@@ -162,7 +161,7 @@ class MLPCritic(nn.Module):
                 nn.Linear(hidden_sizes[0], hidden_sizes[1]),
                 nn.Tanh(),
                 nn.Linear(hidden_sizes[1], 1)
-              ).float().to(device)
+              ).float()
     def forward(self, obs):
         return torch.squeeze(self.v_net(obs), -1) # Critical to ensure v has right shape.
 

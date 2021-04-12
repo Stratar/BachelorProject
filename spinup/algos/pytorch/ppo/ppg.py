@@ -13,6 +13,8 @@ from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg
 from spinup.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 class PPOBuffer:
     """
     A buffer for storing trajectories experienced by a PPO agent interacting
@@ -222,7 +224,7 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     act_dim = env.action_space.shape
 
     # Create actor-critic module
-    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
+    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs).to(device)
 
     # Set up optimizers for policy and value function
     pi_optimizer = Adam(ac.pi.parameters(), lr=pi_lr)
