@@ -150,6 +150,10 @@ class MLPGaussianActor(Actor):
 
 class MLPCritic(nn.Module):
 
+'''    def __init__(self, obs_dim, hidden_sizes, activation):
+        super().__init__()
+        self.v_net = mlp([obs_dim] + list(hidden_sizes) + [1], activation)
+'''
     def __init__(self, obs_dim, hidden_sizes, activation):
         super().__init__()
         self.v_net = nn.Sequential(
@@ -159,7 +163,6 @@ class MLPCritic(nn.Module):
                 nn.Tanh(),
                 nn.Linear(hidden_sizes[1], 1)
               ).float().to(device)
-
     def forward(self, obs):
         return torch.squeeze(self.v_net(obs), -1) # Critical to ensure v has right shape.
 
