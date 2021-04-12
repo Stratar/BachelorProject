@@ -90,13 +90,8 @@ class PPOBuffer:
 
 
 def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
-<<<<<<< HEAD
-        vf_lr=1e-3, train_pi_iters=4, train_v_iters=4, train_aux_iters=4, aux_iters=16, 
-        lam=0.97, max_ep_len=1536, target_kl=0.01, logger_kwargs=dict(), save_freq=5, viz=False):
-=======
         vf_lr=1e-3, train_pi_iters=40, train_v_iters=40, train_aux_iters=40, aux_iters=64, 
         lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
->>>>>>> b1c9cfd2fb66673afc6589afce7c3588fef4b6c9
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -212,7 +207,6 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    #save_prefix = model_file[10:-5] + str(aux_iters) + "aux_iters"
     save_prefix = model_file[10:-5]
     # Instantiate environment
     #env = env_fn()
