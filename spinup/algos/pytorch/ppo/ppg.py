@@ -312,6 +312,8 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     # Set up function for computing value loss
     def compute_loss_v(data):
         obs, ret = data['obs'], data['ret']
+        obs = torch.tensor(obs, dtype=torch.float).to(device)
+        ret = torch.tensor(ret, dtype=torch.float).to(device)
         return ((ac.v(obs) - ret)**2).mean()
 
     # Set up model saving
