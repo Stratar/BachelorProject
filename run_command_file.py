@@ -3,8 +3,8 @@ import os
 import subprocess
 
 # Every 3 hours a new process is started
-#max_seconds = 10800
-max_seconds = 300
+max_seconds = 10800
+#max_seconds = 300
 tstart = time.time()
 last_timestep = 0
 max_timesteps = 12000000

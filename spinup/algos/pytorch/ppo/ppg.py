@@ -85,14 +85,14 @@ class PPOBuffer:
         adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
         self.adv_buf = (self.adv_buf - adv_mean) / adv_std
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
-                    adv=self.adv_buf, logp=self.logp_buf)
+                    adv=self.adv_buf, logp=self.logp_buf, val=self.val_buf)
         return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
 
 
 
-def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
-        vf_lr=1e-3, train_pi_iters=40, train_v_iters=40, train_aux_iters=40, aux_iters=2, 
-        lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
+def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
+        steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2,val_clip=5.0, pi_lr=3e-4, vf_lr=1e-3, train_pi_iters=4, train_v_iters=4, 
+        train_aux_iters=4, aux_iters=1, lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -359,17 +359,26 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                      DeltaLossV=(loss_v.item() - v_l_old))
         return aux_data
 
+    def clipped_value_loss(values, rewards, old_values, clip):
+        value_clipped = old_values + (values - old_values).clamp(-clip, clip)
+        value_loss_1 = (value_clipped.flatten() - rewards) ** 2
+        value_loss_2 = (values.flatten() - rewards) ** 2
+        return torch.mean(torch.max(value_loss_1, value_loss_2))
+
     def compute_aux_loss(aux_data):
         #print(aux_data)
-        obs, act, logp_old = aux_data['obs'], aux_data['act'], aux_data['logp']
+        obs, act, logp_old, old_val, ret = aux_data['obs'], aux_data['act'], aux_data['logp'], aux_data['val'], aux_data['ret']
 
         obs = torch.tensor(obs, dtype=torch.float).to(device)
         act = torch.tensor(act, dtype=torch.float).to(device)
         logp_old = torch.tensor(logp_old, dtype=torch.float).to(device)
+        old_val = torch.tensor(old_val, dtype=torch.float).to(device)
+        ret = torch.tensor(ret, dtype=torch.float).to(device)
 
-        ret = ac.v(obs)
-        pi, logp, val = ac.pi(obs, act)
-        aux_loss = ((ret - val)**2).mean()
+        val = ac.v(obs)
+        pi, logp, pi_val = ac.pi(obs, act)
+        aux_loss = clipped_value_loss(pi_val, ret, old_val, val_clip)
+        #aux_loss = ((val - pi_val)**2).mean()
         loss = torch.nn.KLDivLoss(size_average=False)(logp, logp_old) + aux_loss
         return loss
 
@@ -467,8 +476,8 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                                 logger.log_tabular('KL', average_only=True)
                                 logger.log_tabular('ClipFrac', average_only=True)
                                 logger.log_tabular('StopIter', average_only=True)'''
-        logger.log_tabular('Episodes')
-        logger.log_tabular('EpTrue', np.mean(true_arr))
+        logger.log_tabular('Episodes', average_only=True)
+        #logger.log_tabular('EpTrue', np.mean(true_arr))
         logger.log_tabular('EpTRew', average_only=True)
         logger.log_tabular('Time', time.time()-start_time)
         logger.dump_tabular()
