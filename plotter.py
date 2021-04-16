@@ -10,10 +10,7 @@ import matplotlib.pyplot as plt
 
 X, Y = [], []
 x_val = 0
-#for line in open("spinup/algos/pytorch/ppo/rewards_two_nets.txt", 'r'):
-#for line in open("spinup/algos/pytorch/ppo/rewards.txt", 'r'):
-#for line in open("spinup/algos/pytorch/ppo/ppg_64.txt", 'r'):
-for line in open("Pendul/training_mean_rewards.txt", 'r'):
+for line in open("healthy_Leanne/training_mean_truerewards.txt", 'r'):
   values = [s for s in line.split()]
   #x_val+=float(values[1])
   X.append(float(values[1]))

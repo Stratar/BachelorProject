@@ -92,7 +92,7 @@ class PPOBuffer:
 
 def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2,val_clip=5.0, pi_lr=3e-4, vf_lr=1e-3, train_pi_iters=4, train_v_iters=4, 
-        train_aux_iters=4, aux_iters=1, lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
+        train_aux_iters=4, aux_iters=48, lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -309,12 +309,30 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
 
         return loss_pi, pi_info
 
+    '''def clipped_value_loss(values, rewards, old_values, clip):
+                    value_clipped = old_values + (values - old_values).clamp(-clip, clip)
+                    value_loss_1 = (value_clipped.flatten() - rewards) ** 2
+                    value_loss_2 = (values.flatten() - rewards) ** 2
+                    return torch.mean(torch.min(value_loss_1, value_loss_2))'''
+    def clipped_value_loss(values, rewards, old_values, clip):
+        clip_val = torch.clamp((values - rewards)**2, 1-clip, 1+clip)
+        value_loss = (values.flatten() - rewards) ** 2
+        return torch.mean(torch.min(clip_val, value_loss))
+
     # Set up function for computing value loss
+    '''def compute_loss_v(data):
+                    obs, ret = data['obs'], data['ret']
+                    obs = torch.tensor(obs, dtype=torch.float).to(device)
+                    ret = torch.tensor(ret, dtype=torch.float).to(device)
+                    return ((ac.v(obs) - ret)**2).mean()
+            '''
     def compute_loss_v(data):
-        obs, ret = data['obs'], data['ret']
+        obs, ret, old_val = data['obs'], data['ret'], data['val']
         obs = torch.tensor(obs, dtype=torch.float).to(device)
         ret = torch.tensor(ret, dtype=torch.float).to(device)
-        return ((ac.v(obs) - ret)**2).mean()
+        old_val = torch.tensor(old_val, dtype=torch.float).to(device)
+        val = ac.v(obs)
+        return clipped_value_loss(val, ret, old_val, val_clip)
 
     # Set up model saving
     logger.setup_pytorch_saver(ac)
@@ -358,12 +376,6 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                      DeltaLossPi=(loss_pi.item() - pi_l_old),
                      DeltaLossV=(loss_v.item() - v_l_old))
         return aux_data
-
-    def clipped_value_loss(values, rewards, old_values, clip):
-        value_clipped = old_values + (values - old_values).clamp(-clip, clip)
-        value_loss_1 = (value_clipped.flatten() - rewards) ** 2
-        value_loss_2 = (values.flatten() - rewards) ** 2
-        return torch.mean(torch.max(value_loss_1, value_loss_2))
 
     def compute_aux_loss(aux_data):
         #print(aux_data)
