@@ -1,8 +1,6 @@
 import numpy as np
 from numpy import genfromtxt
 import torch
-from torch.utils.data import Dataset, DataLoader
-from collections import deque, namedtuple
 import os
 from osim.env import ProstheticsEnvMulticlip
 from copy import deepcopy
@@ -16,7 +14,7 @@ from spinup.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_sc
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-class PPOBuffer(Dataset):
+class PPOBuffer:
     """
     A buffer for storing trajectories experienced by a PPO agent interacting
     with the environment, and using Generalized Advantage Estimation (GAE-Lambda)
@@ -33,32 +31,6 @@ class PPOBuffer(Dataset):
         self.logp_buf = np.zeros(size, dtype=np.float32)
         self.gamma, self.lam = gamma, lam
         self.ptr, self.path_start_idx, self.max_size = 0, 0, size
-        self.Memory = namedtuple('Memory', ['obs', 'act', 'logp', 'rew', 'val'])
-        #self.AuxMemory = namedtuple('Memory', ['state', 'target_value', 'old_values'])
-        self.memories = deque([])
-
-        self.data = []
-
-    def __len__(self):
-        return self.max_size
-
-    def get(self):
-        """
-        Call this at the end of an epoch to get all of the data from
-        the buffer, with advantages appropriately normalized (shifted to have
-        mean zero and std one). Also, resets some pointers in the buffer.
-        """
-        assert self.ptr == self.max_size    # buffer has to be full before you can get
-        self.ptr, self.path_start_idx = 0, 0
-        # the next two lines implement the advantage normalization trick
-        adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
-        self.adv_buf = (self.adv_buf - adv_mean) / adv_std
-        data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
-                    adv=self.adv_buf, logp=self.logp_buf, val=self.val_buf)
-        return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
-
-    def __getitem__(self, ind):
-        return tuple(map(lambda t: t[ind], self.data))
 
     def store(self, obs, act, rew, val, logp):
         """
@@ -70,8 +42,6 @@ class PPOBuffer(Dataset):
         self.rew_buf[self.ptr] = rew
         self.val_buf[self.ptr] = val
         self.logp_buf[self.ptr] = logp
-        memory = self.Memory(obs, act, logp, rew, val)
-        self.memories.append(memory)
         self.ptr += 1
 
     def finish_path(self, last_val=0):
@@ -104,61 +74,25 @@ class PPOBuffer(Dataset):
         self.path_start_idx = self.ptr
 
     def get(self):
-        states = []
-        actions = []
-        logp_old = []
-        rewards = []
-        values = []
-        adv = []
-        '''for mem in self.memories:
-                                    states.append(mem.obs)
-                                    actions.append(mem.act)
-                                    logp_old.append(mem.logp)
-                                    rewards.append(mem.rew)
-                                    values.append(mem.val)'''
-
+        """
+        Call this at the end of an epoch to get all of the data from
+        the buffer, with advantages appropriately normalized (shifted to have
+        mean zero and std one). Also, resets some pointers in the buffer.
+        """
+        assert self.ptr == self.max_size    # buffer has to be full before you can get
         self.ptr, self.path_start_idx = 0, 0
         # the next two lines implement the advantage normalization trick
         adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
         self.adv_buf = (self.adv_buf - adv_mean) / adv_std
-        self.memories.append(self.adv_buf)
-
-        to_torch_tensor = lambda t: torch.as_tensor(t, dtype=torch.float32).to(device).detach()
-        #states = torch.stack(states).to(device).detach()
-        #print(torch.tensor(states, dtype=torch.float))
-        states = to_torch_tensor(self.obs_buf)
-        actions = to_torch_tensor(self.act_buf)
-        #print(logp_old)
-        logp_old = to_torch_tensor(self.logp_buf)
-        values = to_torch_tensor(self.val_buf)
-        rewards = torch.tensor(self.rew_buf).float().to(device).detach()
-        adv = to_torch_tensor(self.adv_buf)
-
-        self.data = [states, actions, rewards, logp_old, values, adv]
-
-        return self.data
-        #return states, actions, rewards, self.adv_buf, old_log_probs, values
-
-    '''def get(self):
-                    """
-                    Call this at the end of an epoch to get all of the data from
-                    the buffer, with advantages appropriately normalized (shifted to have
-                    mean zero and std one). Also, resets some pointers in the buffer.
-                    """
-                    assert self.ptr == self.max_size    # buffer has to be full before you can get
-                    self.ptr, self.path_start_idx = 0, 0
-                    # the next two lines implement the advantage normalization trick
-                    adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
-                    self.adv_buf = (self.adv_buf - adv_mean) / adv_std
-                    data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
-                                adv=self.adv_buf, logp=self.logp_buf, val=self.val_buf)
-                    return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}'''
+        data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
+                    adv=self.adv_buf, logp=self.logp_buf, val=self.val_buf)
+        return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
 
 
 
 def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2,val_clip=2.0, pi_lr=3e-4, vf_lr=1e-3, train_pi_iters=4, train_v_iters=4, 
-        train_aux_iters=4, aux_iters=48, batch_size=512, lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
+        steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2,val_clip=1.75, pi_lr=3e-4, vf_lr=1e-3, train_pi_iters=4, train_v_iters=4, 
+        train_aux_iters=4, aux_iters=48, lam=0.97, max_ep_len=1000, target_kl=0.01, logger_kwargs=dict(), save_freq=2, viz=False):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -353,17 +287,22 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     buf = PPOBuffer(obs_dim, act_dim, local_steps_per_epoch, gamma, lam)
 
     # Set up function for computing PPO policy loss
-    def compute_loss_pi(obs, act, logp_old, adv):
-        #obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+    def compute_loss_pi(data):
+        obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+
+        obs = torch.tensor(obs, dtype=torch.float).to(device)
+        act = torch.tensor(act, dtype=torch.float).to(device)
+        adv = torch.tensor(adv, dtype=torch.float).to(device)
+        logp_old = torch.tensor(logp_old, dtype=torch.float).to(device)
         # Policy loss
         pi, logp, _ = ac.pi(obs, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1-clip_ratio, 1+clip_ratio) * adv
-        ent = pi.entropy().mean().item()
-        loss_pi = (-torch.min(ratio * adv, clip_adv) - (0.01 * ent)).mean()
+        loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
 
         # Useful extra info
         approx_kl = (logp_old - logp).mean().item()
+        ent = pi.entropy().mean().item()
         clipped = ratio.gt(1+clip_ratio) | ratio.lt(1-clip_ratio)
         clipfrac = torch.as_tensor(clipped, dtype=torch.float32).mean().item()
         pi_info = dict(kl=approx_kl, ent=ent, cf=clipfrac)
@@ -387,11 +326,11 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                     ret = torch.tensor(ret, dtype=torch.float).to(device)
                     return ((ac.v(obs) - ret)**2).mean()
             '''
-    def compute_loss_v(obs, ret, old_val):
-        #obs, ret, old_val = data['obs'], data['ret'], data['val']
-        #obs = torch.tensor(obs, dtype=torch.float).to(device)
-        #ret = torch.tensor(ret, dtype=torch.float).to(device)
-        #old_val = torch.tensor(old_val, dtype=torch.float).to(device)
+    def compute_loss_v(data):
+        obs, ret, old_val = data['obs'], data['ret'], data['val']
+        obs = torch.tensor(obs, dtype=torch.float).to(device)
+        ret = torch.tensor(ret, dtype=torch.float).to(device)
+        old_val = torch.tensor(old_val, dtype=torch.float).to(device)
         val = ac.v(obs)
         return clipped_value_loss(val, ret, old_val, val_clip)
 
@@ -400,42 +339,35 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
 
     #aux_data = dict() # Store the ppo buffer states
     def update():
-        data= buf.get()
-        batched_data = DataLoader(buf, batch_size = batch_size, shuffle = True)
-        #obs, act, ret, adv, logp_old, val = buf.get()
+        data = buf.get()
         #Maybe do this only when there is an upcoming aux update
-        aux_data = deepcopy(batched_data)
+        aux_data = deepcopy(data)
         #print(aux_data['obs'])
-
-        for obs, act, rew, logp_old, old_val, adv in batched_data:
-            pi_l_old, pi_info_old = compute_loss_pi(obs, act, logp_old, adv)
-            pi_l_old = pi_l_old.item()
-            v_l_old = compute_loss_v(obs, rew, old_val).item()
+        pi_l_old, pi_info_old = compute_loss_pi(data)
+        pi_l_old = pi_l_old.item()
+        v_l_old = compute_loss_v(data).item()
 
         # Train policy with multiple steps of gradient descent
         for i in range(train_pi_iters):
             pi_optimizer.zero_grad()
-
-            for obs, act, rew, logp_old, val, adv in batched_data:
-                loss_pi, pi_info = compute_loss_pi(obs, act, logp_old, adv)
-                kl = mpi_avg(pi_info['kl'])
-                if kl > 1.5 * target_kl:
-                    logger.log('Early stopping at step %d due to reaching max kl.'%i)
-                    break
-                loss_pi.backward()
-                mpi_avg_grads(ac.pi)    # average grads across MPI processes
-                pi_optimizer.step()
+            loss_pi, pi_info = compute_loss_pi(data)
+            kl = mpi_avg(pi_info['kl'])
+            if kl > 1.5 * target_kl:
+                logger.log('Early stopping at step %d due to reaching max kl.'%i)
+                break
+            loss_pi.backward()
+            mpi_avg_grads(ac.pi)    # average grads across MPI processes
+            pi_optimizer.step()
 
         logger.store(StopIter=i)
 
         # Value function learning
         for i in range(train_v_iters):
             vf_optimizer.zero_grad()
-            for obs, act, rew, logp_old, old_val, adv in batched_data:
-                loss_v = compute_loss_v(obs, rew, old_val)
-                loss_v.backward()
-                mpi_avg_grads(ac.v)    # average grads across MPI processes
-                vf_optimizer.step()
+            loss_v = compute_loss_v(data)
+            loss_v.backward()
+            mpi_avg_grads(ac.v)    # average grads across MPI processes
+            vf_optimizer.step()
 
         # Log changes from update
         kl, ent, cf = pi_info['kl'], pi_info_old['ent'], pi_info['cf']
@@ -445,9 +377,9 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                      DeltaLossV=(loss_v.item() - v_l_old))
         return aux_data
 
-    def compute_aux_loss(obs, act, logp_old, old_val, ret):
+    def compute_aux_loss(aux_data):
         #print(aux_data)
-        #obs, act, logp_old, old_val, ret = aux_data['obs'], aux_data['act'], aux_data['logp'], aux_data['val'], aux_data['ret']
+        obs, act, logp_old, old_val, ret = aux_data['obs'], aux_data['act'], aux_data['logp'], aux_data['val'], aux_data['ret']
 
         obs = torch.tensor(obs, dtype=torch.float).to(device)
         act = torch.tensor(act, dtype=torch.float).to(device)
@@ -464,12 +396,11 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
 
     def aux_update(aux_data):
         for _ in range(train_aux_iters):
-            for obs, act, rew, logp_old, old_val, adv in aux_data:
-                pi_optimizer.zero_grad()
-                loss = compute_aux_loss(obs, act, logp_old, old_val, rew)
-                loss.backward()
-                mpi_avg_grads(ac.pi)    # average grads across MPI processes
-                pi_optimizer.step()
+            pi_optimizer.zero_grad()
+            loss = compute_aux_loss(aux_data)
+            loss.backward()
+            mpi_avg_grads(ac.pi)    # average grads across MPI processes
+            pi_optimizer.step()
 
 
     # Prepare for interaction with environment
