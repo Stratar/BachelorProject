@@ -3,8 +3,8 @@ import os
 import subprocess
 
 # Every 3 hours a new process is started
-max_seconds = 10800
-#max_seconds = 300
+#max_seconds = 10800
+max_seconds = 350
 tstart = time.time()
 last_timestep = 0
 max_timesteps = 12000000
@@ -40,7 +40,7 @@ print(exp_model[:-5])
 #No parallelisation
 #args = ["python", "spinup/algos/pytorch/ppo/ppg_v0.0.py", "0", "0", f"../models/{exp_model}"]
 #args = ["python", "algos/pytorch/ppo/ppg_v0.0.py", "0", "0", f"../models/{exp_model}"]
-args = ["python", "spinup/algos/pytorch/ppo/ppg.py", "1", "1", f"../models/{exp_model}", f"{num_proc}"]
+args = ["python", "spinup/algos/pytorch/ppo/ppg.py", "0", "0", f"../models/{exp_model}", f"{num_proc}"]
 #args = ["mpirun", "-np", f"{num_proc}", "python", "algos/pytorch/ppo/ppg_v0.1.py", "0", "0", f"../models/{exp_model}", f"{num_proc}"]
 #if choice is 14:
     #args = ["mpirun", "-np", f"{num_proc}", "python", "algos/pytorch/ppo/ppg_v0.1.py", "0", "0", f"{exp_model}", f"{num_proc}"]

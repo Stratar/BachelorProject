@@ -7,7 +7,7 @@ from copy import deepcopy
 from torch.optim import Adam
 import gym
 import time
-import spinup.algos.pytorch.ppo.core as core
+import spinup.algos.pytorch.ppo.core_gauss as core
 from spinup.utils.logx import EpochLogger
 from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg_grads
 from spinup.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
@@ -294,15 +294,23 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
         act = torch.tensor(act, dtype=torch.float).to(device)
         adv = torch.tensor(adv, dtype=torch.float).to(device)
         logp_old = torch.tensor(logp_old, dtype=torch.float).to(device)
+
+        #print("Data from trajectory collection when computing the loss: ")
+        #print("obs:\n", obs, "\n", obs.requires_grad)
+        #print("act:\n", act, "\n", act.requires_grad)
+        #print("logp_old:\n", logp_old, "\n", logp_old.requires_grad)
+        #print("-----------------------")
         # Policy loss
         pi, logp, _ = ac.pi(obs, act)
+        #print("pi:\n", pi)
+        #print("logp:\n", logp, "\n", logp.requires_grad)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1-clip_ratio, 1+clip_ratio) * adv
-        loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
+        ent = pi.entropy().mean().item()
+        loss_pi = -(torch.min(ratio * adv, clip_adv) + 0.01 * ent).mean()
 
         # Useful extra info
         approx_kl = (logp_old - logp).mean().item()
-        ent = pi.entropy().mean().item()
         clipped = ratio.gt(1+clip_ratio) | ratio.lt(1-clip_ratio)
         clipfrac = torch.as_tensor(clipped, dtype=torch.float32).mean().item()
         pi_info = dict(kl=approx_kl, ent=ent, cf=clipfrac)
@@ -317,8 +325,8 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
     '''def clipped_value_loss(values, rewards, old_values, clip):
                     clip_val = torch.clamp((values - rewards)**2, 1-clip, 1+clip)
                     value_loss = (values.flatten() - rewards) ** 2
-                    return torch.mean(torch.min(clip_val, value_loss))'''
-
+                    return torch.mean(torch.min(clip_val, value_loss))
+            '''
     # Set up function for computing value loss
     '''def compute_loss_v(data):
                     obs, ret = data['obs'], data['ret']
@@ -471,8 +479,8 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
                         '''
         # Perform PPO update!
         aux_data = update()
-        if epoch%aux_iters==0 and epoch!=0 :
-            aux_update(aux_data)
+        #if epoch%aux_iters==0 and epoch!=0 :
+            #aux_update(aux_data)
 
         # Log info about epoch
         logger.log_tabular('Epoch', epoch)
@@ -485,9 +493,10 @@ def ppg(model_file, load_after_iters, restore_model_from_file=1, actor_critic=co
         logger.log_tabular('DeltaLossPi', average_only=True)
         logger.log_tabular('DeltaLossV', average_only=True)
         '''logger.log_tabular('Entropy', average_only=True)
-                                logger.log_tabular('KL', average_only=True)
                                 logger.log_tabular('ClipFrac', average_only=True)
                                 logger.log_tabular('StopIter', average_only=True)'''
+        
+        logger.log_tabular('KL', average_only=True)
         logger.log_tabular('Episodes', average_only=True)
         #logger.log_tabular('EpTrue', np.mean(true_arr))
         logger.log_tabular('EpTRew', average_only=True)

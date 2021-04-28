@@ -78,7 +78,10 @@ class Actor(nn.Module):
         pi, val = self._distribution(obs)
         logp_a = None
         if act is not None:
+            #print("In FORWARD\nOBS:\n", obs, "\n", len(obs))
+            #print("pi:\n", pi)
             logp_a = self._log_prob_from_distribution(pi, act)
+            #print("logp_a:\n", logp_a)
         return pi, logp_a, val
 
 
@@ -142,6 +145,7 @@ class MLPGaussianActor(Actor):
         x = self.nn_layer(obs)
         mu = self.actor_layer(x)
         val = torch.squeeze(self.critic_layer(x), -1)
+        #print("In the _distribution, mu:\n", mu)
         std = torch.exp(self.log_std).to(device)
         return Normal(mu, std), val
 
