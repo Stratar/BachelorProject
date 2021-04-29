@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 X, Y = [], []
 x_val = 0
-for line in open("healthy_Leanne_third/training_mean_truerewards.txt", 'r'):
+for line in open("healthy_Leanne/training_mean_truerewards.txt", 'r'):
   values = [s for s in line.split()]
   #x_val+=float(values[1])
   X.append(float(values[1]))

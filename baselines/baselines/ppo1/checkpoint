@@ -1,0 +1,2 @@
+model_checkpoint_path: "/mnt/c/Users/Aurelien/Documents/OpenSim/OpenSim/baselines/baselines/ppo1/ProstheticsEnv_R2_multiclip_afterIter_1.model"
+all_model_checkpoint_paths: "/mnt/c/Users/Aurelien/Documents/OpenSim/OpenSim/baselines/baselines/ppo1/ProstheticsEnv_R2_multiclip_afterIter_1.model"
