@@ -103,6 +103,7 @@ def learn(env, seed, policy_fn, *,
           clip_param, entcoeff,  # clipping parameter epsilon, entropy coeff
           optim_epochs, optim_stepsize, optim_batchsize,  # optimization hypers
           gamma, lam,  # advantage estimation
+          aux_iters, # after how many ppo updates it'll do the auxiliary phase
           save_model_with_prefix,  # Save the model
           save_prefix,
           restore_model_from_file,  # Load the states/model from this file.
@@ -150,18 +151,25 @@ def learn(env, seed, policy_fn, *,
     losses = [pol_surr, pol_entpen, vf_loss, meankl, meanent]
     loss_names = ["pol_surr", "pol_entpen", "vf_loss", "kl", "ent"]
 
+    # Get trainable variables is a custom function in main.py in the MLP class, EDIT to get specific variable scopes
+    #...if you want to make separate adam optimisers
     var_list = pi.get_trainable_variables()
+    #logger.log(pi.get_trainable_variables(scope="pi/vf"))
 
     # Adding the Aux specific calculations
     aux_meankl = tf.math.reduce_mean(oldpi.pd.kl(pi.pd))
     aux_loss = tf.reduce_mean(tf.square(pi.pi_vpred - ret))
     joint_loss = aux_loss + aux_meankl
-    auxlosses = [aux_meankl, aux_loss]
+    # Adding in the same backward loss, the vf loss
+    aux_total_loss = joint_loss + vf_loss
+    auxlosses = [aux_meankl, aux_loss, vf_loss]
 
     # Imitating the way ppo lossandgrad is built, with the inputs being the components of the calculations
-    #auxlosses the calculation variables and the flatgrad the total loss that is made up of the calculations
-    #as well as the variable list of the networks
-    auxlossandgrad = u.function([ob, ac, ret], auxlosses + [u.flatgrad(joint_loss, var_list)])
+    #...auxlosses the calculation variables and the flatgrad the total loss that is made up of the calculations
+    #...as well as the variable list of the networks. 
+    # Since PPG paper asks for the extra value update after the aux update, maybe I sould add it to this, or
+    #...make a second one for the value loss
+    auxlossandgrad = u.function([ob, ac, ret], auxlosses + [u.flatgrad(aux_total_loss, var_list)])
 
     lossandgrad = u.function([ob, ac, atarg, ret, lrmult], losses + [u.flatgrad(total_loss, var_list)])
     adam = MpiAdam(var_list, epsilon=adam_epsilon)
@@ -276,7 +284,7 @@ def learn(env, seed, policy_fn, *,
             logger.record_tabular("loss_" + name, lossval)
 
         # Adding the auxiliary phase after all the updates for the ppo have been done
-        if iters_so_far % 32 == 0:
+        if (iters_so_far % aux_iters == 0) and (iters_so_far is not 0):
             logger.log("*Auxiliary Phase*")
             for _ in range(optim_epochs):
                 aux_losses = []  # list of tuples, each of which gives the loss for a minibatch
