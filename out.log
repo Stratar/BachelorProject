@@ -1,0 +1,4 @@
+Updating Model file from 30000 to latest format...
+Loaded model healthy_L_FIX from file /home/sm/Documents/Updated Project/osim-rl/osim/models/healthy_Leanne.osim
+Model 'healthy_L_FIX' has subcomponents with duplicate name 'back'.
+The duplicate is being renamed to 'back_0'.

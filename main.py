@@ -109,6 +109,8 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
 
     env = ProstheticsEnvMulticlip(visualize=viz, model_file=model_file, integrator_accuracy=1e-2)
     env_string = model_file[10:-5]
+    destination_string = "../Results/"
+    save_string = destination_string + env_string
 
     def policy_fn(name, ob_space, ac_space):
         return MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=312, num_hid_layers=2)
@@ -129,7 +131,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         aux_iters=32,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,
-                        save_prefix=env_string,
+                        save_prefix=save_string,
                         restore_model_from_file=restore_model_from_file,
                         load_after_iters=load_after_iters,
                         save_after=save_after,

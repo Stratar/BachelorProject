@@ -28,8 +28,9 @@ else:
 print(f"You have chosen:\n[{choice}] : {exp_model}")
 
 try:
-    os.mkdir(f"./{exp_model[:-5]}")
-    os.mkdir(f"./{exp_model[:-5]}/models")
+    os.mkdir("../Results")
+    os.mkdir(f"../Results/{exp_model[:-5]}")
+    os.mkdir(f"../Results/{exp_model[:-5]}/models")
 except FileExistsError as e:
     print("Folder to store data already exists, will overwrite contents of folder.\n")
 print(exp_model[:-5])
