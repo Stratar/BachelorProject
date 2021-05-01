@@ -21,13 +21,13 @@ import plugins.my_manager_factory
 # methods are enclosed in the OsimEnv class
 class OsimModel(object):
     # Initialize simulation
-    stepsize = 0.008
+    stepsize = 0.01
     start_point = 0
     model = None
     state = None
     state0 = None
     starting_speed = None
-    rnd = 1
+
     osim_path = os.path.dirname(__file__)
     model_name = ""
     # These paths contain the experimental data used in the study
@@ -69,7 +69,7 @@ class OsimModel(object):
         self.model = opensim.Model(model_path)
         self.model.initSystem()
         self.brain = opensim.PrescribedController()
-        self.rnd = np.random.randint(18, 22) / 20
+
         self.k_path = self.k_paths_dict[list(self.k_paths_dict.keys())[0]]
         self.states = pd.read_csv(self.k_path, index_col=False).drop('Unnamed: 0', axis=1)
         self.min_length = 1000
@@ -259,9 +259,9 @@ class OsimModel(object):
         self.integrator_accuracy = integrator_accuracy
 
     # def reset_manager(self):
-    # 	  self.manager = opensim.Manager(self.model)
-    # 	  self.manager.setIntegratorAccuracy(self.integrator_accuracy)
-    # 	  self.manager.initialize(self.state)
+    #     self.manager = opensim.Manager(self.model)
+    #     self.manager.setIntegratorAccuracy(self.integrator_accuracy)
+    #     self.manager.initialize(self.state)
 
     # Modified integrator - roughly 2x speedup
     def reset_manager(self):
@@ -275,8 +275,8 @@ class OsimModel(object):
         self.model.equilibrateMuscles(self.state)
         self.istep = self.start_point = 0
         self.init_traj_ix = -1
-        self.rnd = np.random.randint(18, 22) / 20
-        if not True:
+
+        if not test:
             if self.starting_speed != 1.25 or np.random.rand() > 0.8:
                 init_data = self.states_trajectories_dict[self.starting_speed]
                 self.istep = self.start_point = np.random.randint(20, 30)
@@ -398,109 +398,10 @@ class OsimEnv(gym.Env):
 class ProstheticsEnvMulticlip(OsimEnv):
     difficulty = 1
     targets = None
-    rec = False
-    data = {"time": None,
-            "pelvis_tilt": None, "pelvis_list": None, "pelvis_rotation": None,
-            "pelvis_tx": None, "pelvis_ty": None, "pelvis_tz": None,
-            "hip_flexion_r": None, "hip_adduction_r": None, "hip_rotation_r": None,
-            "knee_angle_r": None, "ankle_angle_r": None,
-            "hip_flexion_l": None, "hip_adduction_l": None, "hip_rotation_l": None,
-            "knee_angle_l": None, "ankle_angle_l": None,
-            "lumbar_extension": None,
-            "pelvis_tilt_speed": None, "pelvis_list_speed": None, "pelvis_rotation_speed": None,
-            "pelvis_tx_speed": None, "pelvis_ty_speed": None, "pelvis_tz_speed": None,
-            "hip_flexion_r_speed": None, "hip_adduction_r_speed": None, "hip_rotation_r_speed": None,
-            "knee_angle_r_speed": None, "ankle_angle_r_speed": None,
-            "hip_flexion_l_speed": None, "hip_adduction_l_speed": None, "hip_rotation_l_speed": None,
-            "knee_angle_l_speed": None, "ankle_angle_l_speed": None,
-            "lumbar_extension_speed": None,
-            "abd_r_act": None,
-            "add_r_act": None,
-            "hamstrings_r_act": None,
-            "bifemsh_r_act": None,
-            "glut_max_r_act": None,
-            "iliopsoas_r_act": None,
-            "rect_fem_r_act": None,
-            "vasti_r_act": None,
-            "gastroc_r_act": None,
-            "soleus_r_act": None,
-            "tib_ant_r_act": None,
-            "abd_l_act": None,
-            "add_l_act": None,
-            "hamstrings_l_act": None,
-            "bifemsh_l_act": None,
-            "glut_max_l_act": None,
-            "iliopsoas_l_act": None,
-            "rect_fem_l_act": None,
-            "vasti_l_act": None,
-            "gastroc_l_act": None,
-            "soleus_l_act": None,
-            "tib_ant_l_act": None,
-            "abd_r_fiber_force": None,
-            "add_r_fiber_force": None,
-            "hamstrings_r_fiber_force": None,
-            "bifemsh_r_fiber_force": None,
-            "glut_max_r_fiber_force": None,
-            "iliopsoas_r_fiber_force": None,
-            "rect_fem_r_fiber_force": None,
-            "vasti_r_fiber_force": None,
-            "gastroc_r_fiber_force": None,
-            "soleus_r_fiber_force": None,
-            "tib_ant_r_fiber_force": None,
-            "abd_l_fiber_force": None,
-            "add_l_fiber_force": None,
-            "hamstrings_l_fiber_force": None,
-            "bifemsh_l_fiber_force": None,
-            "glut_max_l_fiber_force": None,
-            "iliopsoas_l_fiber_force": None,
-            "rect_fem_l_fiber_force": None,
-            "vasti_l_fiber_force": None,
-            "gastroc_l_fiber_force": None,
-            "soleus_l_fiber_force": None,
-            "tib_ant_l_fiber_force": None,
-            "abd_r_fiber_length": None,
-            "add_r_fiber_length": None,
-            "hamstrings_r_fiber_length": None,
-            "bifemsh_r_fiber_length": None,
-            "glut_max_r_fiber_length": None,
-            "iliopsoas_r_fiber_length": None,
-            "rect_fem_r_fiber_length": None,
-            "vasti_r_fiber_length": None,
-            "gastroc_r_fiber_length": None,
-            "soleus_r_fiber_length": None,
-            "tib_ant_r_fiber_length": None,
-            "abd_l_fiber_length": None,
-            "add_l_fiber_length": None,
-            "hamstrings_l_fiber_length": None,
-            "bifemsh_l_fiber_length": None,
-            "glut_max_l_fiber_length": None,
-            "iliopsoas_l_fiber_length": None,
-            "rect_fem_l_fiber_length": None,
-            "vasti_l_fiber_length": None,
-            "gastroc_l_fiber_length": None,
-            "soleus_l_fiber_length": None,
-            "tib_ant_l_fiber_length": None,
-            "grf_foot_l_0": None,
-            "grf_foot_l_1": None,
-            "grf_foot_l_2": None,
-            "grf_foot_r_0": None,
-            "grf_foot_r_1": None,
-            "grf_foot_r_2": None,
-            "com_x" : None,
-            "com_y": None,
-            "com_z": None,
-            "com_vel": None,
-            "com_acc": None
-            }
-
-    dataframe = pd.DataFrame(columns=data.keys())
 
     def is_done(self):
         state_desc = self.get_state_desc()
-        x_fail = state_desc["body_pos"]["pelvis"][0] < -0.15
-        y_fail = state_desc["body_pos"]["pelvis"][1] < 0.8
-        z_fail = 0.3 - abs(state_desc["body_pos"]["pelvis"][2]) < 0
-        return x_fail or y_fail or z_fail
+        return state_desc["body_pos"]["pelvis"][1] < 0.7
 
     def get_observation(self):
         state_desc = self.get_state_desc()
@@ -591,79 +492,6 @@ class ProstheticsEnvMulticlip(OsimEnv):
             return 218  # healthy
         else:
             return 221  # transfemoral
-
-    def record(self):
-        state_desc = self.get_state_desc()
-
-        self.data["time"] = self.osim_model.istep * self.osim_model.stepsize
-
-        # ALL THE JOINT ANGLES NEEDED TO RECREATE MOTION IN OPENSIM #####
-        self.data["pelvis_tilt"] = state_desc["joint_pos"]["ground_pelvis"][0]
-        self.data["pelvis_list"] = state_desc["joint_pos"]["ground_pelvis"][1]
-        self.data["pelvis_rotation"] = state_desc["joint_pos"]["ground_pelvis"][2]
-
-        self.data["pelvis_tx"] = state_desc["body_pos"]["pelvis"][0]
-        self.data["pelvis_ty"] = state_desc["body_pos"]["pelvis"][1]
-        self.data["pelvis_tz"] = state_desc["body_pos"]["pelvis"][2]
-
-        self.data["hip_flexion_l"] = state_desc['joint_pos']['hip_l'][0]
-        self.data["hip_flexion_r"] = state_desc['joint_pos']['hip_r'][0]
-        self.data["hip_adduction_l"] = state_desc['joint_pos']['hip_l'][1]
-        self.data["hip_adduction_r"] = state_desc['joint_pos']['hip_r'][1]
-        self.data["hip_rotation_l"] = 0
-        self.data["hip_rotation_r"] = 0
-
-        self.data["ankle_angle_l"] = state_desc['joint_pos']['ankle_l'][0]
-        self.data["ankle_angle_r"] = state_desc['joint_pos']['ankle_r'][0]
-
-        self.data["knee_angle_l"] = state_desc['joint_pos']['knee_l'][0]
-        self.data["knee_angle_r"] = state_desc['joint_pos']['knee_r'][0]
-
-        self.data["lumbar_extension"] = 0
-
-        # ALL THE JOINT VELOCITIES NEEDED FOR DATA ANALYSES AFTERWARDS ####
-        self.data["pelvis_tilt_speed"] = state_desc["joint_vel"]["ground_pelvis"][0]
-        self.data["pelvis_list_speed"] = state_desc["joint_vel"]["ground_pelvis"][1]
-        self.data["pelvis_rotation_speed"] = state_desc["joint_vel"]["ground_pelvis"][2]
-
-        self.data["pelvis_tx_speed"] = state_desc["body_vel"]["pelvis"][0]
-        self.data["pelvis_ty_speed"] = state_desc["body_vel"]["pelvis"][1]
-        self.data["pelvis_tz_speed"] = state_desc["body_vel"]["pelvis"][2]
-
-        self.data["hip_flexion_l_speed"] = state_desc['joint_vel']['hip_l'][0]
-        self.data["hip_flexion_r_speed"] = state_desc['joint_vel']['hip_r'][0]
-        self.data["hip_adduction_l_speed"] = state_desc['joint_vel']['hip_l'][1]
-        self.data["hip_adduction_r_speed"] = state_desc['joint_vel']['hip_r'][1]
-        self.data["hip_rotation_l_speed"] = 0
-        self.data["hip_rotation_r_speed"] = 0
-
-        self.data["ankle_angle_l_speed"] = state_desc['joint_vel']['ankle_l'][0]
-        self.data["ankle_angle_r_speed"] = state_desc['joint_vel']['ankle_r'][0]
-
-        self.data["knee_angle_l_speed"] = state_desc['joint_vel']['knee_l'][0]
-        self.data["knee_angle_r_speed"] = state_desc['joint_vel']['knee_r'][0]
-
-        self.data["lumbar_extension_speed"] = 0
-
-        # Muscle fibre forces and activation ####
-        for muscle in state_desc.get("muscles"):
-            self.data[f"{muscle}_act"] = state_desc.get("muscles").get(muscle).get("activation")
-            self.data[f"{muscle}_fiber_force"] = state_desc.get("muscles").get(muscle).get("fiber_force")
-            self.data[f"{muscle}_fiber_length"] = state_desc.get("muscles").get(muscle).get("fiber_length")
-
-        # Ground reaction forces for left and right foot ####
-        for i in range(3):
-            self.data[f"grf_foot_l_{i}"] = state_desc.get("forces").get("foot_l")[i]
-            self.data[f"grf_foot_r_{i}"] = state_desc.get("forces").get("foot_r")[i]
-
-        # Centre of mass data of the musculoskeletal model ####
-        self.data["com_x"] = state_desc["misc"]["mass_center_pos"][0] - state_desc["body_pos"]["pelvis"][0]
-        self.data["com_y"] = state_desc["misc"]["mass_center_pos"][1] - state_desc["body_pos"]["pelvis"][1]
-        self.data["com_z"] = state_desc["misc"]["mass_center_pos"][2] - state_desc["body_pos"]["pelvis"][2]
-        self.data["com_vel"] = state_desc["misc"]["mass_center_vel"]
-        self.data["com_acc"] = state_desc["misc"]["mass_center_acc"]
-
-        self.dataframe = self.dataframe.append(self.data, ignore_index=True)
 
     def reward(self, t):
         state_desc = self.get_state_desc()
@@ -871,18 +699,10 @@ class ProstheticsEnvMulticlip(OsimEnv):
         #Check reward ratios
         return 0.6 * im_rew + 0.4 * goal_rew, 10 - penalty
 
-    def reset(self, test, record, project=True):
+    def reset(self, test, project=True):
         self.istep = 0
-        self.rec = record
         self.generate_new_targets(test)
         self.osim_model.multi_clip_reset(test)
-
-        if self.rec and not self.dataframe.empty:
-            csv_name = os.path.normpath(os.path.join(os.path.dirname(__file__),
-                                                     f"../../../../Results/{self.osim_model.model_name[10:-5]}/{self.osim_model.model_name[10:-5]}.csv"))
-            self.dataframe.to_csv(csv_name)
-            self.dataframe = pd.DataFrame(columns=self.data.keys())
-            exit()
 
         if not project:
             return self.get_state_desc()
@@ -898,11 +718,8 @@ class ProstheticsEnvMulticlip(OsimEnv):
         else:
             obs = self.get_state_desc()
 
-        if self.rec:
-            self.record()
-
         reward, penalty = self.reward(self.osim_model.istep)
-        return [obs, reward[0], penalty,
+        return [obs, reward, penalty,
                 self.is_done() or (self.osim_model.istep >= (self.spec.timestep_limit + self.osim_model.start_point))]
 
 
@@ -913,4 +730,3 @@ def rect(row):
     y = 0
     z = r * math.sin(theta)
     return np.array([x, y, z])
-

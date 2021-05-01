@@ -11,12 +11,12 @@ from baselines.common.mpi_adam import MpiAdam
 from collections import deque
 
 
-def traj_segment_generator(pi, env, horizon, stochastic):
+def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
     t = 0
     ac = env.action_space.sample()  # not used, just so we have the datatype
     new = True  # marks if we're on first timestep of an episode
 
-    ob = env.reset(test=False)
+    ob = env.reset(test=False, record=recording)
 
     cur_ep_ret = 0  # return in current episode
     cur_ep_len = 0  # len of current episode
@@ -76,7 +76,7 @@ def traj_segment_generator(pi, env, horizon, stochastic):
             cur_ep_len = 0
             cur_ep_true_ret = 0
 
-            ob = env.reset(test=False)
+            ob = env.reset(test=False, record=recording)
 
         t += 1
 
@@ -105,6 +105,7 @@ def learn(env, seed, policy_fn, *,
           gamma, lam,  # advantage estimation
           aux_iters, # after how many ppo updates it'll do the auxiliary phase
           save_model_with_prefix,  # Save the model
+          dir_prefix,
           save_prefix,
           restore_model_from_file,  # Load the states/model from this file.
           load_after_iters,
@@ -113,7 +114,8 @@ def learn(env, seed, policy_fn, *,
           callback=None,  # you can do anything in the callback, since it takes locals(), globals()
           adam_epsilon=1e-5,
           schedule='constant',  # annealing for stepsize parameters (epsilon and adam)
-          stochastic=True
+          stochastic=True,
+          recording=False
           ):
     ob_space = env.observation_space
     ac_space = env.action_space
@@ -184,7 +186,7 @@ def learn(env, seed, policy_fn, *,
 
     # Prepare for rollouts
     # ----------------------------------------
-    seg_gen = traj_segment_generator(pi, env, timesteps_per_actorbatch, stochastic=stochastic)
+    seg_gen = traj_segment_generator(pi, env, timesteps_per_actorbatch, stochastic=stochastic, recording=recording)
 
     episodes_so_far = 0
     timesteps_so_far = 0
@@ -198,18 +200,20 @@ def learn(env, seed, policy_fn, *,
     if restore_model_from_file == 1:
         saver = tf.train.Saver()
         base_path = os.path.dirname(os.path.abspath(__file__))
+        logger.log(save_prefix)
         model_f = os.path.normpath(base_path +
                                    "/../../../" +
-                                   save_prefix +
+                                   dir_prefix +
                                    "/models/" +
                                    save_prefix +
                                    "_afterIter_" +
                                    str(load_after_iters) +
                                    ".model")
+        logger.log(model_f)
         saver.restore(tf.get_default_session(), model_f)
         logger.log("Loaded model from {}".format(model_f))
         # Restore the variables from file
-        data = genfromtxt(save_prefix + '/test_afterIter_' + str(load_after_iters) + '.csv', delimiter=',')
+        data = genfromtxt(dir_prefix + '/test_afterIter_' + str(load_after_iters) + '.csv', delimiter=',')
         for i in range(len(data)):
             data_vector = data[i]
             episodes_so_far = int(data_vector[0])
@@ -320,13 +324,13 @@ def learn(env, seed, policy_fn, *,
         logger.record_tabular("TimeElapsedTotal", time.time() - tstart)
 
         if MPI.COMM_WORLD.Get_rank() == 0:
-            f = open(save_prefix + "/training_rewards.txt", "a+")
-            g = open(save_prefix + "/training_episode_lengths.txt", "a+")
-            h = open(save_prefix + "/training_mean_rewards.txt", "a+")
-            k = open(save_prefix + "/training_mean_lengths.txt", "a+")
-            l = open(save_prefix + "/iterations.txt", "a+")
-            m = open(save_prefix + "/timesteps.txt", "a+")
-            n = open(save_prefix + "/training_mean_truerewards.txt", "a+")
+            f = open(dir_prefix + "/training_rewards.txt", "a+")
+            g = open(dir_prefix + "/training_episode_lengths.txt", "a+")
+            h = open(dir_prefix + "/training_mean_rewards.txt", "a+")
+            k = open(dir_prefix + "/training_mean_lengths.txt", "a+")
+            l = open(dir_prefix + "/iterations.txt", "a+")
+            m = open(dir_prefix + "/timesteps.txt", "a+")
+            n = open(dir_prefix + "/training_mean_truerewards.txt", "a+")
             h.write("Episode %d    " % episodes_so_far)
             h.write("Reward  %d\r\n" % np.mean(rews))
             k.write("Episode %d    " % episodes_so_far)
@@ -356,7 +360,7 @@ def learn(env, seed, policy_fn, *,
                 base_path = os.path.dirname(os.path.abspath(__file__))
                 model_f = os.path.normpath(base_path +
                                            "/../../../" +
-                                           save_prefix +
+                                           dir_prefix +
                                            "/models/" +
                                            save_prefix +
                                            "_afterIter_" +
@@ -372,7 +376,7 @@ def learn(env, seed, policy_fn, *,
                 for i in range(size):
                     asd[i] = [episodes_so_far, timesteps_so_far, iters_so_far, time.time() - tstart, lenbuffer[i],
                               rewbuffer[i], truerewbuffer[i]]
-                    np.savetxt(save_prefix + '/test_afterIter_' + str(iters_so_far) + '.csv', asd, delimiter=",")
+                    np.savetxt(dir_prefix + '/test_afterIter_' + str(iters_so_far) + '.csv', asd, delimiter=",")
 
     return pi
 

@@ -91,7 +91,7 @@ class MlpPolicy(object):
 
 
 def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model_from_file, save_after,
-          load_after_iters, viz, stochastic):
+          load_after_iters, viz, stochastic, recording):
     rank = MPI.COMM_WORLD.Get_rank()
     sess = u.single_threaded_session()
 
@@ -131,11 +131,13 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         aux_iters=32,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,
-                        save_prefix=save_string,
+                        dir_prefix=save_string,
+                        save_prefix=env_string,
                         restore_model_from_file=restore_model_from_file,
                         load_after_iters=load_after_iters,
                         save_after=save_after,
-                        stochastic=stochastic)
+                        stochastic=stochastic,
+                        recording=recording)
     env.close()
 
 
@@ -145,7 +147,7 @@ model_file = sys.argv[3]
 td_file = sys.argv[3]
 iteration = -1
 if restore == 1:
-    with open(model_file[10:-5] + '/iterations.txt', 'r') as f:
+    with open("../Results/" + model_file[10:-5] + '/iterations.txt', 'r') as f:
         lines = f.read().splitlines()
         iteration = int(lines[-1])
 
@@ -157,4 +159,5 @@ train(num_timesteps=50000000,
       save_after=5,
       load_after_iters=iteration,
       viz=False,
-      stochastic=True)
+      stochastic=True,
+      recording=False)

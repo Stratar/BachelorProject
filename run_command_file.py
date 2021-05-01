@@ -29,11 +29,16 @@ print(f"You have chosen:\n[{choice}] : {exp_model}")
 
 try:
     os.mkdir("../Results")
+    print("Results folder NOT found! Creating one outside of this directory...\n")
+except FileExistsError as e:
+    print("Results folder found!\n")
+try:
     os.mkdir(f"../Results/{exp_model[:-5]}")
     os.mkdir(f"../Results/{exp_model[:-5]}/models")
 except FileExistsError as e:
-    print("Folder to store data already exists, will overwrite contents of folder.\n")
+    print("Current model folder found! Will overwrite all data...\n")
 print(exp_model[:-5])
+load_dir = f"../Results/{exp_model[:-5]}"
 #Change this if calling the altMain.py and adjust args accordingly
 #args = ["mpirun", "-np", "4", "python", "main.py", "0", "0", f"../models/{exp_model}"]
 #args = ["python", "main.py", "1", "1", f"../models/{exp_model}"]
@@ -58,12 +63,12 @@ while last_timestep < max_timesteps:
         #os.system("ps -aux |grep python |grep -v 'run_command_file.py' |awk '{print $2}' |xargs kill")
         subprocess.Popen.kill(proc)
         # Get iterations and timesteps from file
-        with open(exp_model[:-5] + '/iterations.txt', 'r') as f:
+        with open(load_dir + '/iterations.txt', 'r') as f:
         #with open(exp_model + '/iterations.txt', 'r') as f:
             lines = f.read().splitlines()
             # Get the last line as the last stored iteration
             last_iter = int(lines[-1])
-        with open(exp_model[:-5] + '/timesteps.txt', 'r') as g:
+        with open(load_dir + '/timesteps.txt', 'r') as g:
         #with open(exp_model + '/timesteps.txt', 'r') as g:
             lines = g.read().splitlines()
             # Get the last line as the last stored time step
