@@ -21,13 +21,13 @@ import plugins.my_manager_factory
 # methods are enclosed in the OsimEnv class
 class OsimModel(object):
     # Initialize simulation
-    stepsize = 0.01
+    stepsize = 0.008
     start_point = 0
     model = None
     state = None
     state0 = None
     starting_speed = None
-
+    rnd = 1
     osim_path = os.path.dirname(__file__)
     model_name = ""
     # These paths contain the experimental data used in the study
@@ -69,7 +69,7 @@ class OsimModel(object):
         self.model = opensim.Model(model_path)
         self.model.initSystem()
         self.brain = opensim.PrescribedController()
-
+        self.rnd = np.random.randint(18, 22) / 20
         self.k_path = self.k_paths_dict[list(self.k_paths_dict.keys())[0]]
         self.states = pd.read_csv(self.k_path, index_col=False).drop('Unnamed: 0', axis=1)
         self.min_length = 1000
@@ -259,9 +259,9 @@ class OsimModel(object):
         self.integrator_accuracy = integrator_accuracy
 
     # def reset_manager(self):
-    #     self.manager = opensim.Manager(self.model)
-    #     self.manager.setIntegratorAccuracy(self.integrator_accuracy)
-    #     self.manager.initialize(self.state)
+    # 	  self.manager = opensim.Manager(self.model)
+    # 	  self.manager.setIntegratorAccuracy(self.integrator_accuracy)
+    # 	  self.manager.initialize(self.state)
 
     # Modified integrator - roughly 2x speedup
     def reset_manager(self):
@@ -275,8 +275,8 @@ class OsimModel(object):
         self.model.equilibrateMuscles(self.state)
         self.istep = self.start_point = 0
         self.init_traj_ix = -1
-
-        if not test:
+        self.rnd = np.random.randint(18, 22) / 20
+        if not True:
             if self.starting_speed != 1.25 or np.random.rand() > 0.8:
                 init_data = self.states_trajectories_dict[self.starting_speed]
                 self.istep = self.start_point = np.random.randint(20, 30)
@@ -492,11 +492,15 @@ class ProstheticsEnvMulticlip(OsimEnv):
             "com_vel": None,
             "com_acc": None
             }
+
     dataframe = pd.DataFrame(columns=data.keys())
 
     def is_done(self):
         state_desc = self.get_state_desc()
-        return state_desc["body_pos"]["pelvis"][1] < 0.7
+        x_fail = state_desc["body_pos"]["pelvis"][0] < -0.15
+        y_fail = state_desc["body_pos"]["pelvis"][1] < 0.8
+        z_fail = 0.3 - abs(state_desc["body_pos"]["pelvis"][2]) < 0
+        return x_fail or y_fail or z_fail
 
     def get_observation(self):
         state_desc = self.get_state_desc()
@@ -661,7 +665,6 @@ class ProstheticsEnvMulticlip(OsimEnv):
 
         self.dataframe = self.dataframe.append(self.data, ignore_index=True)
 
-
     def reward(self, t):
         state_desc = self.get_state_desc()
 
@@ -677,12 +680,12 @@ class ProstheticsEnvMulticlip(OsimEnv):
         #Calculate the MSE for the pelvis positions in (x,(y), z) coordinates and add the the muscle activation penalty to it
         penalty = 0
         x_penalty = (state_desc["body_pos"]["pelvis"][0] - training_data["pelvis_tx"][t]) ** 2
-        #y_penalty = (state_desc["body_pos"]["pelvis"][1] - training_data["pelvis_ty"][t]) ** 2
+        y_penalty = (state_desc["body_pos"]["pelvis"][1] - training_data["pelvis_ty"][t]) ** 2
         z_penalty = (state_desc["body_pos"]["pelvis"][2] - training_data["pelvis_tz"][t]) ** 2
-        penalty += (x_penalty + z_penalty)
+        penalty += (x_penalty + y_penalty + z_penalty)
         penalty += np.sum(np.array(self.osim_model.get_activations()) ** 2) * 0.001
 
-        goal_rew = np.exp(-8 * (x_penalty + z_penalty))
+        goal_rew = np.exp(-8 * (x_penalty + 0.1 * y_penalty + z_penalty))
 
         #Position losses
         ankle_loss = ((state_desc['joint_pos']['ankle_l'] - training_data['ankle_angle_l'][t]) ** 2 +
@@ -868,26 +871,15 @@ class ProstheticsEnvMulticlip(OsimEnv):
         #Check reward ratios
         return 0.6 * im_rew + 0.4 * goal_rew, 10 - penalty
 
-    def reset(self, test, record=False, project=True):
+    def reset(self, test, record, project=True):
         self.istep = 0
+        self.rec = record
         self.generate_new_targets(test)
         self.osim_model.multi_clip_reset(test)
-        self.rec = record
 
-        # This will write only one episode's worth of data and will quit afterwards.
         if self.rec and not self.dataframe.empty:
-            print("Extracting all model data...")
-            try:
-                csv_name = os.path.normpath(os.path.join(os.path.dirname(__file__),
+            csv_name = os.path.normpath(os.path.join(os.path.dirname(__file__),
                                                      f"../../../../Results/{self.osim_model.model_name[10:-5]}/{self.osim_model.model_name[10:-5]}.csv"))
-                '''
-                csv_name = os.path.normpath(os.path.join(os.path.dirname(__file__),
-                                                     f"../../../{self.osim_model.model_name[10:-5]}/{self.osim_model.model_name[10:-5]}.csv"))
-                '''
-                print("Saving model data to: ", csv_name, "\nShutting down simulation...")
-            except FileNotFoundError as e:
-                print("FAILED TO LOCATE SAVE DIRECTORY!\nShutting down simulation...")
-                exit()
             self.dataframe.to_csv(csv_name)
             self.dataframe = pd.DataFrame(columns=self.data.keys())
             exit()
@@ -907,11 +899,10 @@ class ProstheticsEnvMulticlip(OsimEnv):
             obs = self.get_state_desc()
 
         if self.rec:
-            print("Recording all model states...\nWill shut down after one episode...")
             self.record()
 
         reward, penalty = self.reward(self.osim_model.istep)
-        return [obs, reward, penalty,
+        return [obs, reward[0], penalty,
                 self.is_done() or (self.osim_model.istep >= (self.spec.timestep_limit + self.osim_model.start_point))]
 
 
@@ -922,3 +913,4 @@ def rect(row):
     y = 0
     z = r * math.sin(theta)
     return np.array([x, y, z])
+

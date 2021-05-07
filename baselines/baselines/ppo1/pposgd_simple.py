@@ -304,6 +304,8 @@ def learn(env, seed, policy_fn, *,
         lrlocal = (seg["ep_lens"], seg["ep_rets"], seg["ep_true_rets"])  # local values
         listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal)  # list of tuples
         lens, rews, truerews = map(flatten_lists, zip(*listoflrpairs))
+        logger.log(rews)
+        logger.log(rews)
         lenbuffer.extend(lens)
         rewbuffer.extend(rews)
         truerewbuffer.extend(truerews)
@@ -332,7 +334,10 @@ def learn(env, seed, policy_fn, *,
             m = open(dir_prefix + "/timesteps.txt", "a+")
             n = open(dir_prefix + "/training_mean_truerewards.txt", "a+")
             h.write("Episode %d    " % episodes_so_far)
-            h.write("Reward  %d\r\n" % np.mean(rews))
+            try:
+                h.write("Reward  %d\r\n" % np.mean(rews))
+            except ValueError as e:
+                h.write("Reward  %d\r\n" % 0)
             k.write("Episode %d    " % episodes_so_far)
             k.write("Length  %d\r\n" % np.mean(lens))
             n.write("Episode %d    " % episodes_so_far)
@@ -342,7 +347,10 @@ def learn(env, seed, policy_fn, *,
             m.write("%d\r\n" % timesteps_so_far)
             for i in range(episodes_so_far - prev_episodes_so_far):
                 f.write("Episode %d    " % (prev_episodes_so_far + i))
-                f.write("Reward  %d\r\n" % rews[i])
+                try:
+                    f.write("Reward  %d\r\n" % rews[i])
+                except ValueError as e:
+                    f.write("Reward  %d\r\n" % 0)
                 g.write("Episode %d    " % (prev_episodes_so_far + i))
                 g.write("Length  %d\r\n" % lens[i])
             f.close()

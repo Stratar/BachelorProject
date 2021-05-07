@@ -45,7 +45,7 @@ load_dir = f"../Results/{exp_model[:-5]}"
 #args = ["mpirun", "-np", "4", "python", "altMain.py", "0", "0", f"../models/{exp_model}"]
 #No parallelisation
 #args = ["python", "spinup/algos/pytorch/ppo/ppg_v0.0.py", "0", "0", f"../models/{exp_model}"]
-args = ["python", "main.py", "0", "0", f"../models/{exp_model}"]
+args = ["python", "main.py", "1", "1", f"../models/{exp_model}"]
 
 #args = ["python", "spinup/algos/pytorch/ppo/ppg.py", "0", "0", f"../models/{exp_model}", f"{num_proc}"]
 #args = ["mpirun", "-np", f"{num_proc}", "python", "algos/pytorch/ppo/ppg_v0.1.py", "0", "0", f"../models/{exp_model}", f"{num_proc}"]

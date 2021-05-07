@@ -120,7 +120,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         workerseed,
                         policy_fn,
                         max_timesteps=int(num_timesteps * 1.1),
-                        timesteps_per_actorbatch=512,  # 1536
+                        timesteps_per_actorbatch=1536,  # 1536
                         clip_param=0.2,
                         entcoeff=0.01,
                         optim_epochs=4,
@@ -151,13 +151,13 @@ if restore == 1:
         lines = f.read().splitlines()
         iteration = int(lines[-1])
 
-train(num_timesteps=50000000,
+train(num_timesteps=5000000000,
       seed=999,
       model_file=model_file,
       save_model_with_prefix=True,
       restore_model_from_file=restore,
       save_after=5,
       load_after_iters=iteration,
-      viz=False,
+      viz=True,
       stochastic=True,
       recording=False)
