@@ -304,8 +304,6 @@ def learn(env, seed, policy_fn, *,
         lrlocal = (seg["ep_lens"], seg["ep_rets"], seg["ep_true_rets"])  # local values
         listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal)  # list of tuples
         lens, rews, truerews = map(flatten_lists, zip(*listoflrpairs))
-        logger.log(rews)
-        logger.log(rews)
         lenbuffer.extend(lens)
         rewbuffer.extend(rews)
         truerewbuffer.extend(truerews)

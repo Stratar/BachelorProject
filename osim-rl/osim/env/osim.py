@@ -677,7 +677,6 @@ class ProstheticsEnvMulticlip(OsimEnv):
         #Calculate the MSE for the pelvis positions in (x,(y), z) coordinates and add the the muscle activation penalty to it
         penalty = 0
         x_penalty = (state_desc["body_pos"]["pelvis"][0] - training_data["pelvis_tx"][t]) ** 2
-        #y_penalty = (state_desc["body_pos"]["pelvis"][1] - training_data["pelvis_ty"][t]) ** 2
         z_penalty = (state_desc["body_pos"]["pelvis"][2] - training_data["pelvis_tz"][t]) ** 2
         penalty += (x_penalty + z_penalty)
         penalty += np.sum(np.array(self.osim_model.get_activations()) ** 2) * 0.001
