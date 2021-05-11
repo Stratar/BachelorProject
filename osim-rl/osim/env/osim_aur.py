@@ -665,6 +665,7 @@ class ProstheticsEnvMulticlip(OsimEnv):
 
         self.dataframe = self.dataframe.append(self.data, ignore_index=True)
 
+
     def reward(self, t):
         state_desc = self.get_state_desc()
 
@@ -680,12 +681,11 @@ class ProstheticsEnvMulticlip(OsimEnv):
         #Calculate the MSE for the pelvis positions in (x,(y), z) coordinates and add the the muscle activation penalty to it
         penalty = 0
         x_penalty = (state_desc["body_pos"]["pelvis"][0] - training_data["pelvis_tx"][t]) ** 2
-        y_penalty = (state_desc["body_pos"]["pelvis"][1] - training_data["pelvis_ty"][t]) ** 2
         z_penalty = (state_desc["body_pos"]["pelvis"][2] - training_data["pelvis_tz"][t]) ** 2
-        penalty += (x_penalty + y_penalty + z_penalty)
+        penalty += (x_penalty + z_penalty)
         penalty += np.sum(np.array(self.osim_model.get_activations()) ** 2) * 0.001
 
-        goal_rew = np.exp(-8 * (x_penalty + 0.1 * y_penalty + z_penalty))
+        goal_rew = np.exp(-8 * (x_penalty + z_penalty))
 
         #Position losses
         ankle_loss = ((state_desc['joint_pos']['ankle_l'] - training_data['ankle_angle_l'][t]) ** 2 +
@@ -828,11 +828,12 @@ class ProstheticsEnvMulticlip(OsimEnv):
 
                 gait_rew += iliopsoas_loss + glut_loss + hamstring_loss
 
+        
         '''
-
         #For the ground reaction forces detection, use "foot_l" or "foot_r", 
         #maybe use a bool variable to tag which foot is touching the ground
         #if state_desc['forces'][foot][:6] for initiating swing phase #state_desc['forces'][foot][1] for the y-forces? 
+        
         '''
         k_force = 0.4#magic number for contralateral leg constant
         k_phi = 0.4 #magic number for angle constant
@@ -871,15 +872,26 @@ class ProstheticsEnvMulticlip(OsimEnv):
         #Check reward ratios
         return 0.6 * im_rew + 0.4 * goal_rew, 10 - penalty
 
-    def reset(self, test, record, project=True):
+    def reset(self, test, record=False, project=True):
         self.istep = 0
-        self.rec = record
         self.generate_new_targets(test)
         self.osim_model.multi_clip_reset(test)
+        self.rec = record
 
+        # This will write only one episode's worth of data and will quit afterwards.
         if self.rec and not self.dataframe.empty:
-            csv_name = os.path.normpath(os.path.join(os.path.dirname(__file__),
+            print("Extracting all model data...")
+            try:
+                csv_name = os.path.normpath(os.path.join(os.path.dirname(__file__),
                                                      f"../../../../Results/{self.osim_model.model_name[10:-5]}/{self.osim_model.model_name[10:-5]}.csv"))
+                '''
+                csv_name = os.path.normpath(os.path.join(os.path.dirname(__file__),
+                                                     f"../../../{self.osim_model.model_name[10:-5]}/{self.osim_model.model_name[10:-5]}.csv"))
+                '''
+                print("Saving model data to: ", csv_name, "\nShutting down simulation...")
+            except FileNotFoundError as e:
+                print("FAILED TO LOCATE SAVE DIRECTORY!\nShutting down simulation...")
+                exit()
             self.dataframe.to_csv(csv_name)
             self.dataframe = pd.DataFrame(columns=self.data.keys())
             exit()
@@ -899,10 +911,11 @@ class ProstheticsEnvMulticlip(OsimEnv):
             obs = self.get_state_desc()
 
         if self.rec:
+            print("Recording all model states...\nWill shut down after one episode...")
             self.record()
 
         reward, penalty = self.reward(self.osim_model.istep)
-        return [obs, reward[0], penalty,
+        return [obs, reward, penalty,
                 self.is_done() or (self.osim_model.istep >= (self.spec.timestep_limit + self.osim_model.start_point))]
 
 

@@ -824,11 +824,12 @@ class ProstheticsEnvMulticlip(OsimEnv):
 
                 gait_rew += iliopsoas_loss + glut_loss + hamstring_loss
 
+        
         '''
-
         #For the ground reaction forces detection, use "foot_l" or "foot_r", 
         #maybe use a bool variable to tag which foot is touching the ground
         #if state_desc['forces'][foot][:6] for initiating swing phase #state_desc['forces'][foot][1] for the y-forces? 
+        
         '''
         k_force = 0.4#magic number for contralateral leg constant
         k_phi = 0.4 #magic number for angle constant
@@ -865,7 +866,7 @@ class ProstheticsEnvMulticlip(OsimEnv):
             return 0.1 * im_rew + 0.9 * goal_rew, 10 - penalty
 
         #Check reward ratios
-        return 0.6 * im_rew + 0.4 * goal_rew, 10 - penalty
+        return 0.65 * im_rew + 0.35 * goal_rew, 10 - penalty
 
     def reset(self, test, record=False, project=True):
         self.istep = 0

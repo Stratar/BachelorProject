@@ -57,7 +57,7 @@ class MlpPolicy(object):
             self.pdparam = pdparam = tf.layers.dense(last_out, pdtype.param_shape()[0], name='final_pol',
                                       kernel_initializer=u.normc_initializer(0.01))
 
-            self.pi_vpred = tf.layers.dense(last_out, 1, name='final_val', kernel_initializer=u.normc_initializer(1.0))[:, 0]
+            #self.pi_vpred = tf.layers.dense(last_out, 1, name='final_val', kernel_initializer=u.normc_initializer(1.0))[:, 0]
         low = np.zeros_like(ac_space.low, dtype=np.int32)
         high = np.ones_like(ac_space.high, dtype=np.int32)
         #print(type(tf.split(pdparam, high - low + 1, axis=len(pdparam.get_shape()) - 1)))
@@ -69,16 +69,10 @@ class MlpPolicy(object):
         stochastic = tf.placeholder(dtype=tf.bool, shape=())
         ac = u.switch(stochastic, self.pd.sample(), self.pd.mode())
         self._act = u.function([stochastic, ob], [ac, self.vpred])
-        self._aux_act = u.function([stochastic, ob], [ac, self.pi_vpred, self.vpred])
 
     def act(self, stochastic, ob):
         ac1, vpred1 = self._act(stochastic, np.expand_dims(ob, 0))
         return ac1[0], vpred1[0]
-
-    # This may not even be necessary, since the act function is only used in the trajectory generation, where the shared value is not needed
-    def aux_act(self, stochastic, ob):
-        ac1, ac_vpred, vpred1 = self._aux_act(stochastic, np.expand_dims(ob, 0))
-        return ac1[0], ac_vpred[0], vpred1[0]
 
     def get_variables(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
@@ -128,7 +122,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         optim_batchsize=512,
                         gamma=0.99,
                         lam=0.95,
-                        aux_iters=48,
+                        aux_iters=0,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,
                         dir_prefix=save_string,
@@ -158,6 +152,6 @@ train(num_timesteps=5000000000,
       restore_model_from_file=restore,
       save_after=25,
       load_after_iters=iteration,
-      viz=False,
+      viz=True,
       stochastic=True,
       recording=False)
