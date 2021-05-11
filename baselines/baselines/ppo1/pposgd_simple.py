@@ -340,7 +340,7 @@ def learn(env, seed, policy_fn, *,
             k.write("Length  %d\r\n" % np.mean(lens))
             n.write("Episode %d    " % episodes_so_far)
             n.write("Reward  %d\r\n" % np.mean(truerews))
-            if iters_so_far % save_after == 0:
+            if iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= 120:
                 l.write("%d\r\n" % iters_so_far)
             m.write("%d\r\n" % timesteps_so_far)
             for i in range(episodes_so_far - prev_episodes_so_far):
@@ -361,7 +361,7 @@ def learn(env, seed, policy_fn, *,
 
             logger.dump_tabular()
 
-        if iters_so_far % save_after == 0:
+        if iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= 120:
             if save_model_with_prefix:
                 base_path = os.path.dirname(os.path.abspath(__file__))
                 model_f = os.path.normpath(base_path +
