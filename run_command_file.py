@@ -10,7 +10,7 @@ last_timestep = 0
 #Added a ton of timesteps
 max_timesteps = 1200000000
 
-num_proc = 6
+num_proc = 8
 
 print("Please pick a model from:")
 i = 0
@@ -40,9 +40,9 @@ except FileExistsError as e:
     print("Current model folder found! Will overwrite all data...\n")
 print(exp_model[:-5])
 load_dir = f"../Results/{exp_model[:-5]}"
-args = ["mpirun", "-np", f"{num_proc}", "python", "main.py", "1", "1", f"../models/{exp_model}"]
+args = ["mpirun", "-np", f"{num_proc}", "python", "main.py", "0", "0", f"../models/{exp_model}"]
 if num_proc == 1:
-    args = ["python", "main.py", "1", "1", f"../models/{exp_model}"]
+    args = ["python", "main_original.py", "1", "1", f"../models/{exp_model}"]
 
 proc = subprocess.Popen(args)
 

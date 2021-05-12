@@ -121,7 +121,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         optim_stepsize=1e-3,
                         optim_batchsize=512,
                         gamma=0.99,
-                        lam=0.95,
+                        lam=0.9,
                         aux_iters=0,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,
@@ -154,4 +154,4 @@ train(num_timesteps=5000000000,
       load_after_iters=iteration,
       viz=True,
       stochastic=True,
-      recording=False)
+      recording=True)
