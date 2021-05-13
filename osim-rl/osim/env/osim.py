@@ -21,13 +21,13 @@ import plugins.my_manager_factory
 # methods are enclosed in the OsimEnv class
 class OsimModel(object):
     # Initialize simulation
-    stepsize = 0.01
+    stepsize = 0.008
     start_point = 0
     model = None
     state = None
     state0 = None
     starting_speed = None
-
+    rnd = 1
     osim_path = os.path.dirname(__file__)
     model_name = ""
     # These paths contain the experimental data used in the study
@@ -62,14 +62,14 @@ class OsimModel(object):
 
     # Takes a dict where the keys are the speeds of the corresponding paths pointing to motion clips
 
-    def __init__(self, model_file, visualize, integrator_accuracy=1e-3):
+    def __init__(self, visualize, model_file, integrator_accuracy=1e-3):
         self.integrator_accuracy = integrator_accuracy
         self.model_name = model_file
         model_path = os.path.normpath(os.path.join(self.osim_path, model_file))
         self.model = opensim.Model(model_path)
         self.model.initSystem()
         self.brain = opensim.PrescribedController()
-
+        self.rnd = np.random.randint(18, 22) / 20
         self.k_path = self.k_paths_dict[list(self.k_paths_dict.keys())[0]]
         self.states = pd.read_csv(self.k_path, index_col=False).drop('Unnamed: 0', axis=1)
         self.min_length = 1000
@@ -275,8 +275,8 @@ class OsimModel(object):
         self.model.equilibrateMuscles(self.state)
         self.istep = self.start_point = 0
         self.init_traj_ix = -1
-
-        if not test:
+        self.rnd = np.random.randint(18, 22) / 20
+        if not True:
             if self.starting_speed != 1.25 or np.random.rand() > 0.8:
                 init_data = self.states_trajectories_dict[self.starting_speed]
                 self.istep = self.start_point = np.random.randint(20, 150)
@@ -322,7 +322,7 @@ class Spec(object):
 class OsimEnv(gym.Env):
     osim_model = None
     spec = None
-    time_limit = None #1e10
+    time_limit = None
 
     action_space = None
     observation_space = None
@@ -336,7 +336,7 @@ class OsimEnv(gym.Env):
     }
 
     def __init__(self, visualize=False, model_file=None, integrator_accuracy=1e-3):
-        self.osim_model = OsimModel(model_file, visualize, integrator_accuracy)
+        self.osim_model = OsimModel(visualize, model_file, integrator_accuracy)
         self.time_limit = self.osim_model.min_length - 1
         self.spec = Spec(self.time_limit)
 
@@ -353,7 +353,7 @@ class OsimEnv(gym.Env):
         raise NotImplementedError
 
     def is_done(self):
-        raise NotImplementedError #return False
+        raise NotImplementedError
 
     def get_state_desc(self):
         return self.osim_model.get_state_desc()
@@ -373,7 +373,7 @@ class OsimEnv(gym.Env):
         return self.osim_model.get_action_space_size()
 
     def reset(self, project=True):
-        self.osim_model.reset_manager() #osim_model.reset()
+        self.osim_model.reset_manager()
         if not project:
             return self.get_state_desc()
         return self.get_observation()
@@ -492,11 +492,15 @@ class ProstheticsEnvMulticlip(OsimEnv):
             "com_vel": None,
             "com_acc": None
             }
+
     dataframe = pd.DataFrame(columns=data.keys())
 
     def is_done(self):
         state_desc = self.get_state_desc()
-        return state_desc["body_pos"]["pelvis"][1] < 0.7
+        x_fail = state_desc["body_pos"]["pelvis"][0] < -0.15
+        y_fail = state_desc["body_pos"]["pelvis"][1] < 0.7
+        #z_fail = 0.3 - abs(state_desc["body_pos"]["pelvis"][2]) < 0
+        return x_fail or y_fail
 
     def get_observation(self):
         state_desc = self.get_state_desc()
@@ -556,19 +560,14 @@ class ProstheticsEnvMulticlip(OsimEnv):
 
     def generate_new_targets(self, test, poisson_lambda=300):
         nsteps = self.time_limit + 151
-        velocity = np.ones(nsteps) #np.zeros(nsteps)
+        velocity = np.ones(nsteps)
         heading = np.zeros(nsteps)
         velocities = list(self.osim_model.k_paths_dict.keys())
         change = np.cumsum(np.random.poisson(poisson_lambda, 10))
 
         if test or np.random.rand() > 0.5:
-            velocity = velocity * 1.25 #velocity [0] = 1.25
+            velocity = velocity * 1.25
         else:
-            '''
-            trimmed_velocities = velocities.copy()
-            trimmed_velocities.remove(1.25)
-            velocity[0] = trimmed_velocities[np.random.choice(len(trimmed_velocities))]
-            '''
             velocities.remove(1.25)
             velocity = velocity * np.random.choice(velocities)
         self.osim_model.starting_speed = velocity[0]
@@ -871,7 +870,7 @@ class ProstheticsEnvMulticlip(OsimEnv):
             return 0.1 * im_rew + 0.9 * goal_rew, 10 - penalty
 
         #Check reward ratios
-        return 0.65 * im_rew + 0.35 * goal_rew, 10 - penalty
+        return 0.6 * im_rew + 0.4 * goal_rew, 10 - penalty
 
     def reset(self, test, record=False, project=True):
         self.istep = 0
@@ -927,3 +926,4 @@ def rect(row):
     y = 0
     z = r * math.sin(theta)
     return np.array([x, y, z])
+
