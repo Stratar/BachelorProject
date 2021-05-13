@@ -276,7 +276,7 @@ class OsimModel(object):
         self.istep = self.start_point = 0
         self.init_traj_ix = -1
         self.rnd = np.random.randint(18, 22) / 20
-        if not True:
+        if not test: #Change to if not True
             if self.starting_speed != 1.25 or np.random.rand() > 0.8:
                 init_data = self.states_trajectories_dict[self.starting_speed]
                 self.istep = self.start_point = np.random.randint(20, 150)
