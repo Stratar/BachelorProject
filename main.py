@@ -31,6 +31,7 @@ class MlpPolicy(object):
         self.pdtype = pdtype = MultiCategoricalPdType(low=np.zeros_like(ac_space.low, dtype=np.int32),
                                                       high=np.ones_like(ac_space.high, dtype=np.int32))
         gaussian_fixed_var = True
+
         sequence_length = None
 
         ob = u.get_placeholder(name="ob", dtype=tf.float32, shape=[sequence_length] + list(ob_space.shape))
@@ -128,7 +129,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         optim_batchsize=512,
                         gamma=0.999,
                         lam=0.9,
-                        aux_iters=48,
+                        aux_iters=32,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,
                         dir_prefix=save_string,

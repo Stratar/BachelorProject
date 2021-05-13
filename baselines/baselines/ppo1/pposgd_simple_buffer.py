@@ -59,6 +59,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
         news[i] = new
         acs[i] = ac
         prevacs[i] = prevac
+
         ob, rew, true_rew, new = env.step(ac)
 
         rews[i] = rew
@@ -68,12 +69,6 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
 
         cur_ep_len += 1
         if new:
-            '''
-            logger.log(cur_ep_ret)
-            logger.log(cur_ep_true_ret)
-            logger.log(cur_ep_len)
-            logger.log("----------------New Episode----------------")
-            '''
             ep_rets.append(cur_ep_ret)
             ep_lens.append(cur_ep_len)
             ep_true_rets.append(cur_ep_true_ret)
@@ -161,10 +156,6 @@ def learn(env, seed, policy_fn, *,
     # Get trainable variables is a custom function in main.py in the MLP class, EDIT to get specific variable scopes
     #...if you want to make separate adam optimisers
     var_list = pi.get_trainable_variables()
-
-    # The auxiliary buffer being created
-    aux_dict = {"ob": [], "ac": [], "vtarg": []}
-
     #logger.log(pi.get_trainable_variables(scope="pi/vf"))
     if aux_iters != 0:
         # Adding the Aux specific calculations
@@ -236,7 +227,6 @@ def learn(env, seed, policy_fn, *,
     assert sum([max_iters > 0, max_timesteps > 0, max_episodes > 0,
                 max_seconds > 0]) == 1, "Only one time constraint permitted"
 
-    max_time = 0 # Value holding the longest iteration for safety restart save
     while True:
         iter_tstart = time.time()
         if callback:
@@ -297,27 +287,17 @@ def learn(env, seed, policy_fn, *,
         for (lossval, name) in zipsame(meanlosses, loss_names):
             logger.record_tabular("loss_" + name, lossval)
 
-        # Add the relevant data to the auxiliary buffer
-        if aux_iters != 0:
-            aux_dict["ob"] += ob.tolist()
-            aux_dict["ac"] += ac.tolist()
-            aux_dict["vtarg"] += tdlamret.tolist()
-
         # Adding the auxiliary phase after all the updates for the ppo have been done
         if aux_iters != 0 and (iters_so_far % aux_iters == 0) and (iters_so_far is not 0):
             logger.log("*Auxiliary Phase*")
-            d_aux = Dataset(dict(ob=np.array(aux_dict["ob"]), ac=np.array(aux_dict["ac"]), vtarg=np.array(aux_dict["vtarg"])), shuffle=not pi.recurrent)
             for _ in range(optim_epochs):
                 aux_losses = []  # list of tuples, each of which gives the loss for a minibatch
-                for batch in d_aux.iterate_once(optim_batchsize):
+                for batch in d.iterate_once(optim_batchsize):
                     *newlosses, g = auxlossandgrad(batch["ob"], batch["ac"], batch["vtarg"])
                     adam.update(g, optim_stepsize * cur_lrmult)
                     aux_losses.append(newlosses)
 
                 logger.log(fmt_row(13, np.mean(aux_losses, axis=0)))
-
-            aux_dict.clear()
-            aux_dict = {"ob": [], "ac": [], "vtarg": []}
 
 
         logger.record_tabular("ev_tdlam_before", explained_variance(vpredbefore, tdlamret))
@@ -343,10 +323,6 @@ def learn(env, seed, policy_fn, *,
         logger.record_tabular("TimeElapsedMean", (time.time() - tstart) / iters_this_run)
         logger.record_tabular("TimeElapsedTotal", time.time() - tstart)
 
-        # Store the longest that an iteration has taken so far, in order to save before restart
-        if time.time() - iter_tstart > max_time:
-            max_time = time.time() - iter_tstart
-
         if MPI.COMM_WORLD.Get_rank() == 0:
             f = open(dir_prefix + "/training_rewards.txt", "a+")
             g = open(dir_prefix + "/training_episode_lengths.txt", "a+")
@@ -364,7 +340,7 @@ def learn(env, seed, policy_fn, *,
             k.write("Length  %d\r\n" % np.mean(lens))
             n.write("Episode %d    " % episodes_so_far)
             n.write("Reward  %d\r\n" % np.mean(truerews))
-            if iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= max_time:
+            if iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= 180:
                 l.write("%d\r\n" % iters_so_far)
             m.write("%d\r\n" % timesteps_so_far)
             for i in range(episodes_so_far - prev_episodes_so_far):
@@ -385,7 +361,7 @@ def learn(env, seed, policy_fn, *,
 
             logger.dump_tabular()
 
-        if iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= max_time:
+        if iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= 180:
             if save_model_with_prefix:
                 base_path = os.path.dirname(os.path.abspath(__file__))
                 model_f = os.path.normpath(base_path +
