@@ -279,7 +279,7 @@ class OsimModel(object):
         if not test:
             if self.starting_speed != 1.25 or np.random.rand() > 0.8:
                 init_data = self.states_trajectories_dict[self.starting_speed]
-                self.istep = self.start_point = np.random.randint(20, 150)
+                self.istep = self.start_point = np.random.randint(20, 30)
                 init_states = init_data.iloc[self.istep, 1:].values
                 vec = opensim.Vector(init_states)
                 self.model.setStateVariableValues(self.state, vec)
@@ -508,11 +508,12 @@ class ProstheticsEnvMulticlip(OsimEnv):
         #Calculate the MSE for the pelvis positions in (x,(y), z) coordinates and add the the muscle activation penalty to it
         penalty = 0
         x_penalty = (state_desc["body_pos"]["pelvis"][0] - training_data["pelvis_tx"][t]) ** 2
+        y_penalty = (state_desc["body_pos"]["pelvis"][1] - training_data["pelvis_ty"][t]) ** 2
         z_penalty = (state_desc["body_pos"]["pelvis"][2] - training_data["pelvis_tz"][t]) ** 2
-        penalty += (x_penalty + z_penalty)
+        penalty += (x_penalty + y_penalty + z_penalty)
         penalty += np.sum(np.array(self.osim_model.get_activations()) ** 2) * 0.001
 
-        goal_rew = np.exp(-8 * (x_penalty + z_penalty))
+        goal_rew = np.exp(-8 * (x_penalty + 0.1 * y_penalty + z_penalty))
 
         #Position losses
         ankle_loss = ((state_desc['joint_pos']['ankle_l'] - training_data['ankle_angle_l'][t]) ** 2 +
@@ -530,7 +531,7 @@ class ProstheticsEnvMulticlip(OsimEnv):
                        (state_desc["joint_pos"]["ground_pelvis"][1] - training_data['pelvis_list'][t]) ** 2 +
                        (state_desc["joint_pos"]["ground_pelvis"][2] - training_data['pelvis_rotation'][t]) ** 2)
 
-        total_position_loss = ankle_loss + knee_loss + hip_loss
+        total_position_loss = ankle_loss + (1.3 * knee_loss) + (1.3 * hip_loss) + pelvis_loss
         pos_reward = np.exp(-2 * total_position_loss)
 
         # velocity losses
