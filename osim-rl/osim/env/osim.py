@@ -72,7 +72,8 @@ class OsimModel(object):
 
         self.k_path = self.k_paths_dict[list(self.k_paths_dict.keys())[0]]
         self.states = pd.read_csv(self.k_path, index_col=False).drop('Unnamed: 0', axis=1)
-        self.min_length = 1000
+        #self.min_length = 1000
+        self.min_length = 886 # Use less timesteps to allow it to spawn further for 150
         for speed in list(self.k_paths_dict.keys()):
             TD = pd.read_csv(self.k_paths_dict[speed], index_col=False).drop('Unnamed: 0', axis=1)
             if len(TD) <= self.min_length:
@@ -279,7 +280,8 @@ class OsimModel(object):
         if not test:
             if self.starting_speed != 1.25 or np.random.rand() > 0.8:
                 init_data = self.states_trajectories_dict[self.starting_speed]
-                self.istep = self.start_point = np.random.randint(20, 150)
+                #self.istep = self.start_point = np.random.randint(20, 36) # 36 would work with min time of 1000 steps
+                self.istep = self.start_point = np.random.randint(20, 150) # Changed to 150 because of the smallest dataset used reaching up to 1035 timesteps. Values above will give nan values
                 init_states = init_data.iloc[self.istep, 1:].values
                 vec = opensim.Vector(init_states)
                 self.model.setStateVariableValues(self.state, vec)
@@ -460,6 +462,7 @@ class ProstheticsEnvMulticlip(OsimEnv):
         return res
 
     def generate_new_targets(self, test, poisson_lambda=300):
+        #nsteps = self.time_limit + 151 #
         nsteps = self.time_limit + 151
         velocity = np.ones(nsteps)
         heading = np.zeros(nsteps)
@@ -514,6 +517,19 @@ class ProstheticsEnvMulticlip(OsimEnv):
 
         goal_rew = np.exp(-8 * (x_penalty + z_penalty))
 
+        '''
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        f = open(base_path + "/../../../logs.txt", "a+")
+        f.write("goal_rew at t: %.8f\n" % t)
+        f.write("state_desc-pelvis_x: %.8f\n" % state_desc["body_pos"]["pelvis"][0])
+        f.write("state_desc-pelvis_z: %.8f\n" % state_desc["body_pos"]["pelvis"][2])
+        f.write("training_data-pelvis_x: %.8f\n" % training_data["pelvis_tx"][t])
+        f.write("training_data-pelvis_z: %.8f\n" % training_data["pelvis_tz"][t])
+        f.write("x_penalty: %.8f\n" % x_penalty)
+        f.write("z_penalty: %.8f\n" % z_penalty)
+        f.write("goal_rew: %.8f\n" % goal_rew)
+        '''
+
         #Position losses
         ankle_loss = ((state_desc['joint_pos']['ankle_l'] - training_data['ankle_angle_l'][t]) ** 2 +
                       (state_desc['joint_pos']['ankle_r'] - training_data['ankle_angle_r'][t]) ** 2)
@@ -529,9 +545,18 @@ class ProstheticsEnvMulticlip(OsimEnv):
         pelvis_loss = ((state_desc["joint_pos"]["ground_pelvis"][0] - training_data['pelvis_tilt'][t]) ** 2 +
                        (state_desc["joint_pos"]["ground_pelvis"][1] - training_data['pelvis_list'][t]) ** 2 +
                        (state_desc["joint_pos"]["ground_pelvis"][2] - training_data['pelvis_rotation'][t]) ** 2)
-
+        
         total_position_loss = ankle_loss + knee_loss + hip_loss
         pos_reward = np.exp(-2 * total_position_loss)
+        
+        '''
+        f.write("total_position_loss\n")
+        f.write("ankle_loss: %.8f\n" % ankle_loss)
+        f.write("knee_loss: %.8f\n" % knee_loss)
+        f.write("hip_loss: %.8f\n" % hip_loss)
+        f.write("total_position_loss: %.8f\n" % total_position_loss)
+        f.write("pos_reward: %.8f\n" % pos_reward)
+        '''
 
         # velocity losses
         pelvis_rot_loss_v = ((state_desc["joint_vel"]["ground_pelvis"][0] - training_data['pelvis_tilt_speed'][t])**2 +
@@ -554,10 +579,21 @@ class ProstheticsEnvMulticlip(OsimEnv):
                         (state_desc['joint_vel']['hip_r'][1] - training_data['hip_adduction_r_speed'][t])**2)
 
         total_velocity_loss = ankle_loss_v + knee_loss_v + hip_loss_v 
-        velocity_reward = np.exp(-0.1*total_velocity_loss) 
-
+        velocity_reward = np.exp(-0.1*total_velocity_loss)
+        '''
+        f.write("total_velocity_loss\n")
+        f.write("ankle_loss_v: %.8f\n" % ankle_loss_v)
+        f.write("knee_loss_v: %.8f\n" % knee_loss_v)
+        f.write("hip_loss_v: %.8f\n" % hip_loss_v)
+        f.write("total_velocity_loss: %.8f\n" % total_velocity_loss) 
+        f.write("velocity_reward: %.8f\n" % velocity_reward) 
+        '''
         #Put the velocity and position rewards in one
         im_rew = 0.75*pos_reward + 0.25*velocity_reward
+        '''
+        f.write("im_rew: %.8f\n\n" % im_rew) 
+        f.close()
+        '''
 
         '''
         #Gait Target based reward

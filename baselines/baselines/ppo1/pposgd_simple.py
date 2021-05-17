@@ -74,6 +74,10 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
             logger.log(cur_ep_true_ret)
             logger.log(cur_ep_len)
             logger.log("----------------New Episode----------------")
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            f = open(base_path + "/../../../logs.txt", "a+")
+            f.write("----------------New Episode----------------\n")
+            f.close()
             '''
             ep_rets.append(cur_ep_ret)
             ep_lens.append(cur_ep_len)
@@ -108,7 +112,7 @@ def add_vtarg_and_adv(seg, gamma, lam):
 def learn(env, seed, policy_fn, *,
           timesteps_per_actorbatch,  # timesteps per actor per update
           clip_param, entcoeff,  # clipping parameter epsilon, entropy coeff
-          optim_epochs, optim_stepsize, optim_batchsize,  # optimization hypers
+          optim_epochs, optim_stepsize, optim_batchsize, optim_aux, aux_batch_iters, # optimization hypers
           gamma, lam,  # advantage estimation
           aux_iters, # after how many ppo updates it'll do the auxiliary phase
           save_model_with_prefix,  # Save the model
@@ -166,6 +170,7 @@ def learn(env, seed, policy_fn, *,
 
     # The auxiliary buffer being created
     aux_dict = {"ob": [], "ac": [], "vtarg": []}
+    dict_size = 0 # Used to determine the size of the aux buffer, for the batch size
 
     #logger.log(pi.get_trainable_variables(scope="pi/vf"))
     if aux_iters != 0:
@@ -304,6 +309,7 @@ def learn(env, seed, policy_fn, *,
             aux_dict["ob"] += ob.tolist()
             aux_dict["ac"] += ac.tolist()
             aux_dict["vtarg"] += tdlamret.tolist()
+            dict_size = len(aux_dict["ob"])
 
         # Adding the auxiliary phase after all the updates for the ppo have been done
         if aux_iters != 0 and (iters_so_far % aux_iters == 0) and (iters_so_far is not 0):
@@ -311,15 +317,16 @@ def learn(env, seed, policy_fn, *,
             d_aux = Dataset(dict(ob=np.array(aux_dict["ob"]), ac=np.array(aux_dict["ac"]), vtarg=np.array(aux_dict["vtarg"])), shuffle=not pi.recurrent)
             for _ in range(optim_epochs):
                 aux_losses = []  # list of tuples, each of which gives the loss for a minibatch
-                for batch in d_aux.iterate_once(optim_batchsize):
+                for batch in d_aux.iterate_once(int(dict_size/aux_batch_iters)):
                     *newlosses, g = auxlossandgrad(batch["ob"], batch["ac"], batch["vtarg"])
-                    adam.update(g, optim_stepsize * cur_lrmult)
+                    adam.update(g, optim_aux * cur_lrmult)
                     aux_losses.append(newlosses)
 
                 logger.log(fmt_row(13, np.mean(aux_losses, axis=0)))
 
             aux_dict.clear()
             aux_dict = {"ob": [], "ac": [], "vtarg": []}
+            dict_size = 0
 
 
         logger.record_tabular("ev_tdlam_before", explained_variance(vpredbefore, tdlamret))

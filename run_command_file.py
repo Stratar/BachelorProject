@@ -40,9 +40,9 @@ except FileExistsError as e:
     print("Current model folder found! Will overwrite all data...\n")
 print(exp_model[:-5])
 load_dir = f"../Results/{exp_model[:-5]}"
-args = ["mpirun", "-np", f"{num_proc}", "python", "main.py", "0", "0", f"../models/{exp_model}"]
+args = ["mpirun", "-np", f"{num_proc}", "python", "main_original.py", "1", "1", f"../models/{exp_model}"]
 if num_proc == 1:
-    args = ["python", "main.py", "1", "1", f"../models/{exp_model}"]
+    args = ["python", "main_original.py", "1", "1", f"../models/{exp_model}"]
 
 proc = subprocess.Popen(args)
 
@@ -66,9 +66,9 @@ while last_timestep < max_timesteps:
             last_timestep = int(lines[-1])
 
         tstart = time.time()
-        args = ["mpirun", "-np", f"{num_proc}", "python", "main.py", "1", "1", f"../models/{exp_model}"]
+        args = ["mpirun", "-np", f"{num_proc}", "python", "main_original.py", "1", "1", f"../models/{exp_model}"]
         if num_proc == 1:
-            args = ["python", "main.py", "1", "1", f"../models/{exp_model}"]
+            args = ["python", "main_original.py", "1", "1", f"../models/{exp_model}"]
 
         proc = subprocess.Popen(args)
 
