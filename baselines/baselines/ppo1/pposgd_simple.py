@@ -9,6 +9,7 @@ from baselines.common import Dataset, explained_variance, fmt_row, zipsame
 from baselines import logger
 from baselines.common.mpi_adam import MpiAdam
 from collections import deque
+import pickle
 
 
 def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
@@ -239,6 +240,10 @@ def learn(env, seed, policy_fn, *,
             lenbuffer.append(int(data_vector[4]))
             rewbuffer.append(int(data_vector[5]))
             truerewbuffer.append(int(data_vector[6]))
+        
+        buf_file = open(dir_prefix + '/aux_buffer_iter_' + str(iters_so_far) + '.npy', "rb")
+        aux_dict = pickle.load(buf_file)
+        buf_file.close()
 
     assert sum([max_iters > 0, max_timesteps > 0, max_episodes > 0,
                 max_seconds > 0]) == 1, "Only one time constraint permitted"
@@ -416,6 +421,12 @@ def learn(env, seed, policy_fn, *,
                     asd[i] = [episodes_so_far, timesteps_so_far, iters_so_far, time.time() - tstart, lenbuffer[i],
                               rewbuffer[i], truerewbuffer[i]]
                     np.savetxt(dir_prefix + '/test_afterIter_' + str(iters_so_far) + '.csv', asd, delimiter=",")
+
+                # Storing the aux Buffer
+                #Maybe store as np.save and load with np.load?
+                buf_file = open(dir_prefix + '/aux_buffer_iter_' + str(iters_so_far) + '.npy', "wb")
+                pickle.dump(aux_dict, buf_file)
+                buf_file.close()
 
     return pi
 

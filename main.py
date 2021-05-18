@@ -127,7 +127,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         optim_epochs=4,
                         optim_stepsize=1e-3,
                         optim_batchsize=512,
-                        optim_aux=1e-4,
+                        optim_aux=5e-4,
                         aux_batch_iters=3,
                         gamma=0.999,
                         lam=0.9,

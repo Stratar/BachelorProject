@@ -548,7 +548,7 @@ class ProstheticsEnvMulticlip(OsimEnv):
         
         total_position_loss = ankle_loss + knee_loss + hip_loss
         pos_reward = np.exp(-2 * total_position_loss)
-        
+
         '''
         f.write("total_position_loss\n")
         f.write("ankle_loss: %.8f\n" % ankle_loss)
