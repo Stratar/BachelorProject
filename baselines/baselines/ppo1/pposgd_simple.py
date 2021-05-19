@@ -241,7 +241,7 @@ def learn(env, seed, policy_fn, *,
             rewbuffer.append(int(data_vector[5]))
             truerewbuffer.append(int(data_vector[6]))
         
-        buf_file = open(dir_prefix + '/aux_buffer_iter_' + str(iters_so_far) + '.npy', "rb")
+        buf_file = open(dir_prefix + '/buffers/aux_buffer_iter_' + str(iters_so_far) + '.npy', "rb")
         aux_dict = pickle.load(buf_file)
         buf_file.close()
 
@@ -424,7 +424,7 @@ def learn(env, seed, policy_fn, *,
 
                 # Storing the aux Buffer
                 #Maybe store as np.save and load with np.load?
-                buf_file = open(dir_prefix + '/aux_buffer_iter_' + str(iters_so_far) + '.npy', "wb")
+                buf_file = open(dir_prefix + '/buffers/aux_buffer_iter_' + str(iters_so_far) + '.npy', "wb")
                 pickle.dump(aux_dict, buf_file)
                 buf_file.close()
 
