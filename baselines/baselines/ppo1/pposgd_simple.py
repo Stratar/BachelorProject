@@ -314,14 +314,15 @@ def learn(env, seed, policy_fn, *,
             # This is meant to control the size of the buffer to a manageable size, as well as benefit from the most recent experiences of the model
 
             if dict_size >= timesteps_per_actorbatch*aux_iters/4.0:
-                aux_dict["ob"].pop(0)
-                aux_dict["ac"].pop(0)
-                aux_dict["vtarg"].pop(0)
+                del aux_dict["ob"][:len(ob.tolist())]
+                del aux_dict["ac"][:len(ac.tolist())]
+                del aux_dict["vtarg"][:len(tdlamret.tolist())]
             
             aux_dict["ob"] += ob.tolist()
             aux_dict["ac"] += ac.tolist()
             aux_dict["vtarg"] += tdlamret.tolist()
-            dict_size = len(aux_dict["ob"])
+            dict_size = (len(aux_dict["ob"]) + len(aux_dict["ac"]) + len(aux_dict["vtarg"]))/3
+            logger.log(dict_size)
 
         # Adding the auxiliary phase after all the updates for the ppo have been done
         if aux_iters != 0 and (iters_so_far % aux_iters == 0) and (iters_so_far is not 0):

@@ -12,6 +12,14 @@ max_timesteps = 1200000000
 
 num_proc = 4
 
+'''d = {"one": [1, 2, 3, 4, 5], "two": [6, 7, 8, 9, 0]}
+print(d["one"])
+del d["one"][:3]
+print(d["one"])
+d["one"]+=d["two"]
+print(d["one"])
+exit()'''
+
 print("Please pick a model from:")
 i = 0
 models = [f for f in os.listdir("./osim-rl/osim/models/") if (os.path.isfile(os.path.join("./osim-rl/osim/models/", f)) and f[-5:] == ".osim")]
