@@ -127,11 +127,11 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         optim_epochs=4,
                         optim_stepsize=1e-3,
                         optim_batchsize=512,
-                        optim_aux=25e-5,
+                        optim_aux=1e-3,
                         aux_batch_iters=4,
                         gamma=0.999,
                         lam=0.9,
-                        aux_iters=32,
+                        aux_iters=64,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,
                         dir_prefix=save_string,
@@ -146,8 +146,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
 
 # args = ["mpirun", "-np", "4", "python", "main.py", "0", "model_file_name.osim", "training_data.csv"]
 restore = int(sys.argv[1])
-model_file = sys.argv[3]
-td_file = sys.argv[3]
+model_file = sys.argv[2]
 iteration = -1
 if restore == 1:
     with open("../Results/" + model_file[10:-5] + '/iterations.txt', 'r') as f:

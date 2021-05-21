@@ -311,6 +311,13 @@ def learn(env, seed, policy_fn, *,
 
         # Add the relevant data to the auxiliary buffer
         if aux_iters != 0:
+            # This is meant to control the size of the buffer to a manageable size, as well as benefit from the most recent experiences of the model
+
+            if dict_size >= timesteps_per_actorbatch*aux_iters/4.0:
+                aux_dict["ob"].pop(0)
+                aux_dict["ac"].pop(0)
+                aux_dict["vtarg"].pop(0)
+            
             aux_dict["ob"] += ob.tolist()
             aux_dict["ac"] += ac.tolist()
             aux_dict["vtarg"] += tdlamret.tolist()
