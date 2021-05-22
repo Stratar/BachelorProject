@@ -48,7 +48,8 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
         if t > 0 and t % horizon == 0:
             yield {"ob": obs, "rew": rews, "vpred": vpreds, "new": news,
                    "ac": acs, "prevac": prevacs, "nextvpred": vpred * (1 - new),
-                   "ep_rets": ep_rets, "ep_lens": ep_lens, "ep_true_rets": ep_true_rets}
+                   "ep_rets": ep_rets, "ep_lens": ep_lens, "ep_true_rets": ep_true_rets,
+                   "true_rews": true_rews}
             # Be careful!!! if you change the downstream algorithm to aggregate
             # several of these batches, then be sure to do a deepcopy
             ep_rets = []
@@ -64,6 +65,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
         ob, rew, true_rew, new = env.step(ac)
 
         rews[i] = rew
+        true_rews[i] = true_rew
 
         cur_ep_ret += rew
         cur_ep_true_ret += true_rew
@@ -140,7 +142,7 @@ def learn(env, seed, policy_fn, *,
     oldpi = policy_fn("oldpi", ob_space, ac_space)  # Network for old policy
     atarg = tf.placeholder(dtype=tf.float32, shape=[None])  # Target advantage function (if applicable)
     ret = tf.placeholder(dtype=tf.float32, shape=[None])  # Empirical return
-    shared_ret = tf.placeholder(dtype=tf.float32, shape=[None])  # Empirical return from the shared network
+    true_ret = tf.placeholder(dtype=tf.float32, shape=[None])  # Empirical return from the shared network
 
     lrmult = tf.placeholder(name='lrmult', dtype=tf.float32,
                             shape=[])  # learning rate multiplier, updated with schedule
@@ -170,14 +172,14 @@ def learn(env, seed, policy_fn, *,
     var_list = pi.get_trainable_variables()
 
     # The auxiliary buffer being created
-    aux_dict = {"ob": [], "ac": [], "vtarg": []}
+    aux_dict = {"ob": [], "ac": [], "vtarg": [], "true": []}
     dict_size = 0 # Used to determine the size of the aux buffer, for the batch size
 
     #logger.log(pi.get_trainable_variables(scope="pi/vf"))
     if aux_iters != 0:
         # Adding the Aux specific calculations
         aux_meankl = tf.math.reduce_mean(oldpi.pd.kl(pi.pd))
-        aux_loss = tf.reduce_mean(tf.square(pi.pi_vpred - ret))
+        aux_loss = tf.reduce_mean((1 - tf.math.exp(-1.5/true_ret)) * tf.reduce_mean(tf.square(pi.pi_vpred - ret)))
         joint_loss = aux_loss + aux_meankl
         # Adding in the same backward loss, the vf loss
         aux_total_loss = joint_loss + vf_loss
@@ -188,7 +190,7 @@ def learn(env, seed, policy_fn, *,
         #...as well as the variable list of the networks. 
         # Since PPG paper asks for the extra value update after the aux update, maybe I sould add it to this, or
         #...make a second one for the value loss
-        auxlossandgrad = u.function([ob, ac, ret], auxlosses + [u.flatgrad(aux_total_loss, var_list)])
+        auxlossandgrad = u.function([ob, ac, ret, true_ret], auxlosses + [u.flatgrad(aux_total_loss, var_list)])
 
     lossandgrad = u.function([ob, ac, atarg, ret, lrmult], losses + [u.flatgrad(total_loss, var_list)])
     adam = MpiAdam(var_list, epsilon=adam_epsilon)
@@ -244,6 +246,7 @@ def learn(env, seed, policy_fn, *,
         buf_file = open(dir_prefix + '/buffers/aux_buffer_iter_' + str(iters_so_far) + '.npy', "rb")
         aux_dict = pickle.load(buf_file)
         buf_file.close()
+        dict_size = (len(aux_dict["ob"]) + len(aux_dict["ac"]) + len(aux_dict["vtarg"]) +len(aux_dict["true"]))/4
 
     assert sum([max_iters > 0, max_timesteps > 0, max_episodes > 0,
                 max_seconds > 0]) == 1, "Only one time constraint permitted"
@@ -274,7 +277,7 @@ def learn(env, seed, policy_fn, *,
         seg = seg_gen.__next__()
         add_vtarg_and_adv(seg, gamma, lam)
 
-        ob, ac, atarg, tdlamret = seg["ob"], seg["ac"], seg["adv"], seg["tdlamret"]
+        ob, ac, atarg, tdlamret, true = seg["ob"], seg["ac"], seg["adv"], seg["tdlamret"], seg["true_rews"]
 
         vpredbefore = seg["vpred"]  # predicted value function before udpate
         atarg = (atarg - atarg.mean()) / atarg.std()  # standardized advantage function estimate
@@ -317,28 +320,31 @@ def learn(env, seed, policy_fn, *,
                 del aux_dict["ob"][:len(ob.tolist())]
                 del aux_dict["ac"][:len(ac.tolist())]
                 del aux_dict["vtarg"][:len(tdlamret.tolist())]
+                del aux_dict["true"][:len(true.tolist())]
             
             aux_dict["ob"] += ob.tolist()
             aux_dict["ac"] += ac.tolist()
             aux_dict["vtarg"] += tdlamret.tolist()
-            dict_size = (len(aux_dict["ob"]) + len(aux_dict["ac"]) + len(aux_dict["vtarg"]))/3
+            aux_dict["true"] += true.tolist()
+            logger.log(np.mean(aux_dict["true"]))
+            dict_size = (len(aux_dict["ob"]) + len(aux_dict["ac"]) + len(aux_dict["vtarg"]) +len(aux_dict["true"]))/4
             logger.log(dict_size)
 
         # Adding the auxiliary phase after all the updates for the ppo have been done
         if aux_iters != 0 and (iters_so_far % aux_iters == 0) and (iters_so_far is not 0):
             logger.log("*Auxiliary Phase*")
-            d_aux = Dataset(dict(ob=np.array(aux_dict["ob"]), ac=np.array(aux_dict["ac"]), vtarg=np.array(aux_dict["vtarg"])), shuffle=not pi.recurrent)
-            for _ in range(optim_epochs):
+            d_aux = Dataset(dict(ob=np.array(aux_dict["ob"]), ac=np.array(aux_dict["ac"]), vtarg=np.array(aux_dict["vtarg"]), true=np.array(aux_dict["true"])), 
+                                                                                                                                    shuffle=not pi.recurrent)
+            for _ in range(12):
                 aux_losses = []  # list of tuples, each of which gives the loss for a minibatch
                 for batch in d_aux.iterate_once(int(dict_size/aux_batch_iters)):
-                    *newlosses, g = auxlossandgrad(batch["ob"], batch["ac"], batch["vtarg"])
+                    *newlosses, g = auxlossandgrad(batch["ob"], batch["ac"], batch["vtarg"], batch["true"])
                     adam.update(g, optim_aux * cur_lrmult)
                     aux_losses.append(newlosses)
-
                 logger.log(fmt_row(13, np.mean(aux_losses, axis=0)))
 
             aux_dict.clear()
-            aux_dict = {"ob": [], "ac": [], "vtarg": []}
+            aux_dict = {"ob": [], "ac": [], "vtarg": [], "true": []}
             dict_size = 0
 
 
