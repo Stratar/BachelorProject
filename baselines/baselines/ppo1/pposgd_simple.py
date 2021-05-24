@@ -179,7 +179,7 @@ def learn(env, seed, policy_fn, *,
     if aux_iters != 0:
         # Adding the Aux specific calculations
         aux_meankl = tf.math.reduce_mean(oldpi.pd.kl(pi.pd))
-        aux_loss = tf.reduce_mean((1 - tf.math.exp(-1.5/true_ret)) * tf.reduce_mean(tf.square(pi.pi_vpred - ret)))
+        aux_loss = tf.reduce_mean((1 - tf.math.exp(-0.00012/true_ret))) * tf.reduce_mean(tf.square(pi.pi_vpred - ret)) #tf.reduce_mean() over the whole equation
         joint_loss = aux_loss + aux_meankl
         # Adding in the same backward loss, the vf loss
         aux_total_loss = joint_loss + vf_loss

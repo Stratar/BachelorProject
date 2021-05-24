@@ -160,6 +160,6 @@ train(num_timesteps=5000000000,
       restore_model_from_file=restore,
       save_after=25,
       load_after_iters=iteration,
-      viz=False,
+      viz=True,
       stochastic=True,
       recording=False)
