@@ -92,7 +92,7 @@ class MlpPolicy(object):
 
 
 def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model_from_file, save_after,
-          load_after_iters, viz, stochastic, recording):
+          load_after_iters, viz, stochastic, recording, test):
     rank = MPI.COMM_WORLD.Get_rank()
     sess = u.single_threaded_session()
 
@@ -129,8 +129,10 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         optim_batchsize=512,
                         optim_aux=1e-3,
                         aux_batch_iters=4,
+                        aux_optim_epochs=12,
                         gamma=0.999,
                         lam=0.9,
+                        beta=0.00012,
                         aux_iters=64,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,
@@ -140,13 +142,15 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         load_after_iters=load_after_iters,
                         save_after=save_after,
                         stochastic=stochastic,
-                        recording=recording)
+                        recording=recording,
+                        test=test)
     env.close()
 
 
 # args = ["mpirun", "-np", "4", "python", "main.py", "0", "model_file_name.osim", "training_data.csv"]
 restore = int(sys.argv[1])
 model_file = sys.argv[2]
+test = sys.argv[3]
 iteration = -1
 if restore == 1:
     with open("../Results/" + model_file[10:-5] + '/iterations.txt', 'r') as f:
@@ -154,7 +158,7 @@ if restore == 1:
         iteration = int(lines[-1])
 
 train(num_timesteps=5000000000,
-      seed=999,
+      seed=990,
       model_file=model_file,
       save_model_with_prefix=True,
       restore_model_from_file=restore,
@@ -162,4 +166,5 @@ train(num_timesteps=5000000000,
       load_after_iters=iteration,
       viz=True,
       stochastic=True,
-      recording=False)
+      recording=True,
+      test=test)

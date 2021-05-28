@@ -17,8 +17,8 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
     ac = env.action_space.sample()  # not used, just so we have the datatype
     new = True  # marks if we're on first timestep of an episode
 
-    #ob = env.reset(test=False, record=recording)
-    ob = env.reset(test=False)
+    ob = env.reset(test=False, record=recording)
+    #ob = env.reset(test=False)
 
     cur_ep_ret = 0  # return in current episode
     cur_ep_len = 0  # len of current episode
@@ -89,8 +89,8 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
             cur_ep_len = 0
             cur_ep_true_ret = 0
 
-            #ob = env.reset(test=False, record=recording)
-            ob = env.reset(test=False)
+            ob = env.reset(test=False, record=recording)
+            #ob = env.reset(test=False)
 
         t += 1
 
@@ -115,9 +115,9 @@ def add_vtarg_and_adv(seg, gamma, lam):
 def learn(env, seed, policy_fn, *,
           timesteps_per_actorbatch,  # timesteps per actor per update
           clip_param, entcoeff,  # clipping parameter epsilon, entropy coeff
-          optim_epochs, optim_stepsize, optim_batchsize, optim_aux, aux_batch_iters, # optimization hypers
+          optim_epochs, optim_stepsize, optim_batchsize, optim_aux, aux_batch_iters, aux_optim_epochs, # optimization hypers
           gamma, lam,  # advantage estimation
-          aux_iters, # after how many ppo updates it'll do the auxiliary phase
+          beta, aux_iters, # after how many ppo updates it'll do the auxiliary phase
           save_model_with_prefix,  # Save the model
           dir_prefix,
           save_prefix,
@@ -129,7 +129,8 @@ def learn(env, seed, policy_fn, *,
           adam_epsilon=1e-5,
           schedule='constant',  # annealing for stepsize parameters (epsilon and adam)
           stochastic=True,
-          recording=False
+          recording=False,
+          test=0
           ):
     ob_space = env.observation_space
     ac_space = env.action_space
@@ -179,7 +180,7 @@ def learn(env, seed, policy_fn, *,
     if aux_iters != 0:
         # Adding the Aux specific calculations
         aux_meankl = tf.math.reduce_mean(oldpi.pd.kl(pi.pd))
-        aux_loss = tf.reduce_mean((1 - tf.math.exp(-0.00012/true_ret))) * tf.reduce_mean(tf.square(pi.pi_vpred - ret)) #tf.reduce_mean() over the whole equation
+        aux_loss = tf.reduce_mean((1 - tf.math.exp(-beta/true_ret))) * tf.reduce_mean(tf.square(pi.pi_vpred - ret)) #tf.reduce_mean() over the whole equation
         joint_loss = aux_loss + aux_meankl
         # Adding in the same backward loss, the vf loss
         aux_total_loss = joint_loss + vf_loss
@@ -335,7 +336,7 @@ def learn(env, seed, policy_fn, *,
             logger.log("*Auxiliary Phase*")
             d_aux = Dataset(dict(ob=np.array(aux_dict["ob"]), ac=np.array(aux_dict["ac"]), vtarg=np.array(aux_dict["vtarg"]), true=np.array(aux_dict["true"])), 
                                                                                                                                     shuffle=not pi.recurrent)
-            for _ in range(12):
+            for _ in range(aux_optim_epochs):
                 aux_losses = []  # list of tuples, each of which gives the loss for a minibatch
                 for batch in d_aux.iterate_once(int(dict_size/aux_batch_iters)):
                     *newlosses, g = auxlossandgrad(batch["ob"], batch["ac"], batch["vtarg"], batch["true"])
@@ -375,7 +376,7 @@ def learn(env, seed, policy_fn, *,
         if time.time() - iter_tstart > max_time:
             max_time = time.time() - iter_tstart
 
-        if MPI.COMM_WORLD.Get_rank() == 0:
+        if MPI.COMM_WORLD.Get_rank() == 0 and test == 0:
             f = open(dir_prefix + "/training_rewards.txt", "a+")
             g = open(dir_prefix + "/training_episode_lengths.txt", "a+")
             h = open(dir_prefix + "/training_mean_rewards.txt", "a+")
@@ -413,7 +414,7 @@ def learn(env, seed, policy_fn, *,
 
             logger.dump_tabular()
 
-        if iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= max_time:
+        if (iters_so_far % save_after == 0 or 10800 - (time.time() - tstart) <= max_time) and test == 0:
             if save_model_with_prefix:
                 base_path = os.path.dirname(os.path.abspath(__file__))
                 model_f = os.path.normpath(base_path +
