@@ -12,7 +12,7 @@ from collections import deque
 import pickle
 
 
-def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
+def traj_segment_generator(networks, env, horizon, stochastic, recording=False):#networks is pi
     t = 0
     ac = env.action_space.sample()  # not used, just so we have the datatype
     new = True  # marks if we're on first timestep of an episode
@@ -39,7 +39,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, recording=False):
     while True:
         prevac = ac
         # Change this to call a function if we want to test a certain behavior
-        ac, vpred = pi.act(stochastic, ob)
+        ac, vpred = networks.act(stochastic, ob)
         
 
         # Slight weirdness here because we need value function at time T
@@ -139,8 +139,12 @@ def learn(env, seed, policy_fn, *,
     with g.as_default():
         tf.set_random_seed(seed)
 
-    pi = policy_fn("pi", ob_space, ac_space)  # Construct network for new policy
-    oldpi = policy_fn("oldpi", ob_space, ac_space)  # Network for old policy
+    networks = policy_fn("pi", ob_space, ac_space)  # Construct network for new policy
+    oldnetworks = policy_fn("oldpi", ob_space, ac_space)  # Network for old policy
+
+    #pi = policy_fn("pi", ob_space, ac_space)  # Construct network for new policy
+    #oldpi = policy_fn("oldpi", ob_space, ac_space)  # Network for old policy
+
     atarg = tf.placeholder(dtype=tf.float32, shape=[None])  # Target advantage function (if applicable)
     ret = tf.placeholder(dtype=tf.float32, shape=[None])  # Empirical return
     true_ret = tf.placeholder(dtype=tf.float32, shape=[None])  # Empirical return from the shared network
@@ -150,27 +154,38 @@ def learn(env, seed, policy_fn, *,
     clip_param = clip_param * lrmult  # Annealed cliping parameter epislon
 
     ob = u.get_placeholder_cached(name="ob")
-    ac = pi.pdtype.sample_placeholder([None])
+    ac = networks.pi.pdtype.sample_placeholder([None])
+    #ac = pi.pdtype.sample_placeholder([None])
 
-    kloldnew = oldpi.pd.kl(pi.pd)
-    ent = pi.pd.entropy()
+    kloldnew = oldnetworks.pi.pd.kl(networks.pi.pd)
+    #kloldnew = oldpi.pd.kl(pi.pd)
+    ent = networks.pi.pd.entropy()
+    #ent = pi.pd.entropy()
     meankl = tf.reduce_mean(kloldnew)
     meanent = tf.reduce_mean(ent)
     pol_entpen = (-entcoeff) * meanent
 
-    ratio = tf.exp(pi.pd.logp(ac) - oldpi.pd.logp(ac))  # pnew / pold
+    ratio = tf.exp(networks.pi.pd.logp(ac) - oldnetworks.pi.pd.logp(ac))  # pnew / pold
+    #ratio = tf.exp(pi.pd.logp(ac) - oldpi.pd.logp(ac))  # pnew / pold
     surr1 = ratio * atarg  # surrogate from conservative policy iteration
     surr2 = tf.clip_by_value(ratio, 1.0 - clip_param, 1.0 + clip_param) * atarg  #
     pol_surr = - tf.reduce_mean(tf.minimum(surr1, surr2))  # PPO's pessimistic surrogate (L^CLIP)
 
-    vf_loss = tf.reduce_mean(tf.square(pi.vpred - ret))
-    total_loss = pol_surr + pol_entpen + vf_loss
-    losses = [pol_surr, pol_entpen, vf_loss, meankl, meanent]
+    vf_loss = tf.reduce_mean(tf.square(networks.val.vpred - ret))
+    #vf_loss = tf.reduce_mean(tf.square(pi.vpred - ret))
+    total_loss = pol_surr + pol_entpen
+    #total_loss = pol_surr + pol_entpen + vf_loss
+    pol_losses = [pol_surr, pol_entpen, meankl, meanent]
+    val_losses = [vf_loss]
+    #losses = [pol_surr, pol_entpen, vf_loss, meankl, meanent]
     loss_names = ["pol_surr", "pol_entpen", "vf_loss", "kl", "ent"]
+    log_loss_names = ["pol_surr", "pol_entpen", "kl", "ent"]
 
     # Get trainable variables is a custom function in main.py in the MLP class, EDIT to get specific variable scopes
     #...if you want to make separate adam optimisers
-    var_list = pi.get_trainable_variables()
+    pol_var_list = networks.pi.get_trainable_variables()
+    val_var_list = networks.val.get_trainable_variables()
+    #var_list = pi.get_trainable_variables()
 
     # The auxiliary buffer being created
     aux_dict = {"ob": [], "ac": [], "vtarg": [], "true": []}
@@ -179,8 +194,11 @@ def learn(env, seed, policy_fn, *,
     #logger.log(pi.get_trainable_variables(scope="pi/vf"))
     if aux_iters != 0:
         # Adding the Aux specific calculations
-        aux_meankl = tf.math.reduce_mean(oldpi.pd.kl(pi.pd))
-        aux_loss = tf.reduce_mean((1 - tf.math.exp(-beta/true_ret))) * tf.reduce_mean(tf.square(pi.pi_vpred - ret)) #tf.reduce_mean() over the whole equation
+        
+        aux_meankl = tf.math.reduce_mean(oldnetworks.pi.pd.kl(networks.pi.pd))
+        #aux_meankl = tf.math.reduce_mean(oldpi.pd.kl(pi.pd))
+        aux_loss = tf.reduce_mean((1 - tf.math.exp(-beta/true_ret)) * tf.reduce_mean(tf.square(networks.pi.vpred - ret))) #tf.reduce_mean() over the whole equation
+        #aux_loss = tf.reduce_mean((1 - tf.math.exp(-beta/true_ret)) * tf.reduce_mean(tf.square(pi.pi_vpred - ret))) #tf.reduce_mean() over the whole equation
         joint_loss = aux_loss + aux_meankl
         # Adding in the same backward loss, the vf loss
         aux_total_loss = joint_loss + vf_loss
@@ -191,22 +209,36 @@ def learn(env, seed, policy_fn, *,
         #...as well as the variable list of the networks. 
         # Since PPG paper asks for the extra value update after the aux update, maybe I sould add it to this, or
         #...make a second one for the value loss
-        auxlossandgrad = u.function([ob, ac, ret, true_ret], auxlosses + [u.flatgrad(aux_total_loss, var_list)])
+        auxlossandgrad = u.function([ob, ac, ret, true_ret], auxlosses + [u.flatgrad(aux_total_loss, pol_var_list)])
+        #auxlossandgrad = u.function([ob, ac, ret, true_ret], auxlosses + [u.flatgrad(aux_total_loss, var_list)])
 
-    lossandgrad = u.function([ob, ac, atarg, ret, lrmult], losses + [u.flatgrad(total_loss, var_list)])
-    adam = MpiAdam(var_list, epsilon=adam_epsilon)
+    pol_lossandgrad = u.function([ob, ac, atarg, lrmult], pol_losses + [u.flatgrad(total_loss, pol_var_list)])
+    val_lossandgrad = u.function([ob, ret], val_losses + [u.flatgrad(vf_loss, val_var_list)])
+    #lossandgrad = u.function([ob, ac, atarg, ret, lrmult], losses + [u.flatgrad(total_loss, var_list)])
+    pol_adam = MpiAdam(pol_var_list, epsilon=adam_epsilon)
+    val_adam = MpiAdam(val_var_list, epsilon=adam_epsilon)
+    #adam = MpiAdam(var_list, epsilon=adam_epsilon)
 
     assign_old_eq_new = u.function([], [], updates=[tf.assign(oldv, newv)
                                                     for (oldv, newv) in
+                                                    zipsame(oldnetworks.pi.get_variables(), networks.pi.get_variables())])    
+    '''
+    assign_old_eq_new = u.function([], [], updates=[tf.assign(oldv, newv)
+                                                    for (oldv, newv) in
                                                     zipsame(oldpi.get_variables(), pi.get_variables())])
-    compute_losses = u.function([ob, ac, atarg, ret, lrmult], losses)
+    '''
+    compute_losses = u.function([ob, ac, atarg, lrmult], pol_losses)
+    #compute_losses = u.function([ob, ac, atarg, ret, lrmult], losses)
 
     u.initialize()
-    adam.sync()
+    pol_adam.sync()
+    val_adam.sync()
+    #adam.sync()
 
     # Prepare for rollouts
     # ----------------------------------------
-    seg_gen = traj_segment_generator(pi, env, timesteps_per_actorbatch, stochastic=stochastic, recording=recording)
+    seg_gen = traj_segment_generator(networks, env, timesteps_per_actorbatch, stochastic=stochastic, recording=recording)
+    #seg_gen = traj_segment_generator(pi, env, timesteps_per_actorbatch, stochastic=stochastic, recording=recording)
 
     episodes_so_far = 0
     timesteps_so_far = 0
@@ -243,11 +275,11 @@ def learn(env, seed, policy_fn, *,
             lenbuffer.append(int(data_vector[4]))
             rewbuffer.append(int(data_vector[5]))
             truerewbuffer.append(int(data_vector[6]))
-        
-        buf_file = open(dir_prefix + '/buffers/aux_buffer_iter_' + str(iters_so_far) + '.npy', "rb")
-        aux_dict = pickle.load(buf_file)
-        buf_file.close()
-        dict_size = (len(aux_dict["ob"]) + len(aux_dict["ac"]) + len(aux_dict["vtarg"]) +len(aux_dict["true"]))/4
+        if aux_iters != 0:
+            buf_file = open(dir_prefix + '/buffers/aux_buffer_iter_' + str(iters_so_far) + '.npy', "rb")
+            aux_dict = pickle.load(buf_file)
+            buf_file.close()
+            dict_size = (len(aux_dict["ob"]) + len(aux_dict["ac"]) + len(aux_dict["vtarg"]) +len(aux_dict["true"]))/4
 
     assert sum([max_iters > 0, max_timesteps > 0, max_episodes > 0,
                 max_seconds > 0]) == 1, "Only one time constraint permitted"
@@ -275,6 +307,9 @@ def learn(env, seed, policy_fn, *,
 
         logger.log("********** Iteration %i ************" % iters_so_far)
         
+        '''logger.log(var_list)
+                                for item in var_list:
+                                    logger.log(item.value)'''
         seg = seg_gen.__next__()
         add_vtarg_and_adv(seg, gamma, lam)
 
@@ -282,11 +317,14 @@ def learn(env, seed, policy_fn, *,
 
         vpredbefore = seg["vpred"]  # predicted value function before udpate
         atarg = (atarg - atarg.mean()) / atarg.std()  # standardized advantage function estimate
-        d = Dataset(dict(ob=ob, ac=ac, atarg=atarg, vtarg=tdlamret), shuffle=not pi.recurrent)
+        d = Dataset(dict(ob=ob, ac=ac, atarg=atarg, vtarg=tdlamret), shuffle=not networks.pi.recurrent)
+        #d = Dataset(dict(ob=ob, ac=ac, atarg=atarg, vtarg=tdlamret), shuffle=not pi.recurrent)
         optim_batchsize = optim_batchsize or ob.shape[0]
 
-        if hasattr(pi, "ob_rms"):
-            pi.ob_rms.update(ob)  # update running mean/std for policy
+        if hasattr(networks.pi, "ob_rms"):
+            networks.pi.ob_rms.update(ob)  # update running mean/std for policy
+        #if hasattr(pi, "ob_rms"):
+        #    pi.ob_rms.update(ob)  # update running mean/std for policy
 
         assign_old_eq_new()  # set old parameter values to new parameter values
         logger.log("Optimizing...")
@@ -295,22 +333,36 @@ def learn(env, seed, policy_fn, *,
         for _ in range(optim_epochs):
             losses = []  # list of tuples, each of which gives the loss for a minibatch
             for batch in d.iterate_once(optim_batchsize):
-                *newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
-                adam.update(g, optim_stepsize * cur_lrmult)
+                *newlosses, g = pol_lossandgrad(batch["ob"], batch["ac"], batch["atarg"], cur_lrmult)
+                #*newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
+                pol_adam.update(g, optim_stepsize * cur_lrmult)
+                #adam.update(g, optim_stepsize * cur_lrmult)
+                losses.append(newlosses)
+            logger.log(fmt_row(13, np.mean(losses, axis=0)))
+
+        logger.log("Evaluating losses...")
+
+        for _ in range(optim_epochs):
+            losses = []  # list of tuples, each of which gives the loss for a minibatch
+            for batch in d.iterate_once(optim_batchsize):
+                *newlosses, g = val_lossandgrad(batch["ob"], batch["vtarg"])
+                #*newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
+                val_adam.update(g, optim_stepsize * cur_lrmult)
+                #adam.update(g, optim_stepsize * cur_lrmult)
                 losses.append(newlosses)
             logger.log(fmt_row(13, np.mean(losses, axis=0)))
 
         logger.log("Evaluating losses...")
         losses = []
 
-        #print(pi.pd.logp(tf.Tensor(ac, dtype=tf.float32)))
-        #logger.log(pi.pd.logp(ac))
         for batch in d.iterate_once(optim_batchsize):
-            newlosses = compute_losses(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
+            newlosses = compute_losses(batch["ob"], batch["ac"], batch["atarg"], cur_lrmult)
+            #newlosses = compute_losses(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
             losses.append(newlosses)
         meanlosses = np.mean(losses, axis=0)
         logger.log(fmt_row(13, meanlosses))
-        for (lossval, name) in zipsame(meanlosses, loss_names):
+        for (lossval, name) in zipsame(meanlosses, log_loss_names):
+        #for (lossval, name) in zipsame(meanlosses, loss_names):
             logger.record_tabular("loss_" + name, lossval)
 
         # Add the relevant data to the auxiliary buffer
@@ -335,12 +387,15 @@ def learn(env, seed, policy_fn, *,
         if aux_iters != 0 and (iters_so_far % aux_iters == 0) and (iters_so_far is not 0):
             logger.log("*Auxiliary Phase*")
             d_aux = Dataset(dict(ob=np.array(aux_dict["ob"]), ac=np.array(aux_dict["ac"]), vtarg=np.array(aux_dict["vtarg"]), true=np.array(aux_dict["true"])), 
-                                                                                                                                    shuffle=not pi.recurrent)
+                                                                                                                                    shuffle=not networks.pi.recurrent)
+            '''d_aux = Dataset(dict(ob=np.array(aux_dict["ob"]), ac=np.array(aux_dict["ac"]), vtarg=np.array(aux_dict["vtarg"]), true=np.array(aux_dict["true"])), 
+                                                                                                                                                                        shuffle=not pi.recurrent)'''
             for _ in range(aux_optim_epochs):
                 aux_losses = []  # list of tuples, each of which gives the loss for a minibatch
                 for batch in d_aux.iterate_once(int(dict_size/aux_batch_iters)):
                     *newlosses, g = auxlossandgrad(batch["ob"], batch["ac"], batch["vtarg"], batch["true"])
-                    adam.update(g, optim_aux * cur_lrmult)
+                    pol_adam.update(g, optim_aux * cur_lrmult)
+                    #adam.update(g, optim_aux * cur_lrmult)
                     aux_losses.append(newlosses)
                 logger.log(fmt_row(13, np.mean(aux_losses, axis=0)))
 

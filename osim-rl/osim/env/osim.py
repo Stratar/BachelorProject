@@ -572,7 +572,7 @@ class ProstheticsEnvMulticlip(OsimEnv):
         state_desc = self.get_state_desc()
         x_fail = state_desc["body_pos"]["pelvis"][0] < -0.15
         z_fail = 0.5 - abs(state_desc["body_pos"]["pelvis"][2]) < 0
-        y_fail = state_desc["body_pos"]["pelvis"][1] < 0.8 
+        y_fail = state_desc["body_pos"]["pelvis"][1] < 0.75 
         return x_fail or z_fail or y_fail
 
     def get_observation(self):

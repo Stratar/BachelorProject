@@ -36,7 +36,7 @@ class MlpPolicy(object):
 
         ob = u.get_placeholder(name="ob", dtype=tf.float32, shape=[sequence_length] + list(ob_space.shape))
 
-        with tf.variable_scope("obfilter"):
+        with tf.variable_scope("obfilter_pol"):
             self.ob_rms = RunningMeanStd(shape=ob_space.shape)
 
         with tf.variable_scope('vf'):
@@ -44,21 +44,21 @@ class MlpPolicy(object):
 
             last_out = obz
             for i in range(num_hid_layers):
-                last_out = tf.nn.tanh(tf.layers.dense(last_out, hid_size, name="fc%i" % (i + 1),
+                last_out = tf.nn.tanh(tf.layers.dense(last_out, hid_size, name="pol_fc%i" % (i + 1),
                                                       kernel_initializer=u.normc_initializer(1.0)))  # tanh
             self.vpred = tf.layers.dense(last_out, 1, name='final', kernel_initializer=u.normc_initializer(1.0))[:, 0]
 
         with tf.variable_scope('pol'):
             last_out = obz
             for i in range(num_hid_layers):
-                last_out = tf.nn.tanh(tf.layers.dense(last_out, hid_size, name='fc%i' % (i + 1),
+                last_out = tf.nn.tanh(tf.layers.dense(last_out, hid_size, name='pol_fc%i' % (i + 1),
                                                       kernel_initializer=u.normc_initializer(1.0)))  # tanh
             
             #print(last_out)
-            self.pdparam = pdparam = tf.layers.dense(last_out, pdtype.param_shape()[0], name='final_pol',
+            self.pdparam = pdparam = tf.layers.dense(last_out, pdtype.param_shape()[0], name='pol_final',
                                       kernel_initializer=u.normc_initializer(0.01))
 
-            self.pi_vpred = tf.layers.dense(last_out, 1, name='final_val', kernel_initializer=u.normc_initializer(1.0))[:, 0]
+            self.pi_vpred = tf.layers.dense(last_out, 1, name='pol_val_final', kernel_initializer=u.normc_initializer(1.0))[:, 0]
         low = np.zeros_like(ac_space.low, dtype=np.int32)
         high = np.ones_like(ac_space.high, dtype=np.int32)
         #print(type(tf.split(pdparam, high - low + 1, axis=len(pdparam.get_shape()) - 1)))
@@ -69,17 +69,11 @@ class MlpPolicy(object):
 
         stochastic = tf.placeholder(dtype=tf.bool, shape=())
         ac = u.switch(stochastic, self.pd.sample(), self.pd.mode())
-        self._act = u.function([stochastic, ob], [ac, self.vpred])
-        self._aux_act = u.function([stochastic, ob], [ac, self.pi_vpred, self.vpred])
+        self._act = u.function([stochastic, ob], [ac])
 
     def act(self, stochastic, ob):
-        ac1, vpred1 = self._act(stochastic, np.expand_dims(ob, 0))
-        return ac1[0], vpred1[0]
-
-    # This may not even be necessary, since the act function is only used in the trajectory generation, where the shared value is not needed
-    def aux_act(self, stochastic, ob):
-        ac1, ac_vpred, vpred1 = self._aux_act(stochastic, np.expand_dims(ob, 0))
-        return ac1[0], ac_vpred[0], vpred1[0]
+        ac1 = self._act(stochastic, np.expand_dims(ob, 0))
+        return ac1[0]
 
     def get_variables(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
@@ -90,6 +84,62 @@ class MlpPolicy(object):
     def get_initial_state(self):
         return []
 
+class MlpValue(object):
+    recurrent = False
+
+    def __init__(self, name, *args, **kwargs):
+        with tf.variable_scope(name):
+            self._init(*args, **kwargs)
+            self.scope = tf.get_variable_scope().name
+
+    def _init(self, ob_space, ac_space, hid_size, num_hid_layers, gaussian_fixed_var=True):
+        assert isinstance(ob_space, gym.spaces.Box)
+
+        gaussian_fixed_var = True
+
+        sequence_length = None
+
+        ob = u.get_placeholder(name="ob", dtype=tf.float32, shape=[sequence_length] + list(ob_space.shape))
+
+        with tf.variable_scope("obfilter_val"):
+            self.ob_rms = RunningMeanStd(shape=ob_space.shape)
+
+        with tf.variable_scope('vf'):
+            obz = tf.clip_by_value((ob - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
+
+            last_out = obz
+            for i in range(num_hid_layers):
+                last_out = tf.nn.tanh(tf.layers.dense(last_out, hid_size, name="val_fc%i" % (i + 1),
+                                                      kernel_initializer=u.normc_initializer(1.0)))  # tanh
+            self.vpred = tf.layers.dense(last_out, 1, name='val_final', kernel_initializer=u.normc_initializer(1.0))[:, 0]
+
+
+        stochastic = tf.placeholder(dtype=tf.bool, shape=())
+        self._act = u.function([stochastic, ob], [self.vpred])
+
+    def act(self, stochastic, ob):
+        vpred1 = self._act(stochastic, np.expand_dims(ob, 0))
+        return vpred1[0]
+
+    def get_variables(self):
+        return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
+
+    def get_trainable_variables(self):
+        return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.scope)
+
+    def get_initial_state(self):
+        return []
+
+class Mlp(object):
+
+    def __init__(self, name, ob_space, ac_space, hid_size=312, num_hid_layers=2):
+        self.val = MlpValue(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=hid_size, num_hid_layers=num_hid_layers)
+        self.pi = MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=hid_size, num_hid_layers=num_hid_layers)
+
+    def act(self, stochastic, ob):
+        val = self.val.act(stochastic, ob)
+        ac = self.pi.act(stochastic, ob)
+        return ac[0], val[0]
 
 def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model_from_file, save_after,
           load_after_iters, viz, stochastic, recording, test):
@@ -114,7 +164,7 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
     save_string = destination_string + env_string
 
     def policy_fn(name, ob_space, ac_space):
-        return MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=312, num_hid_layers=2)
+        return Mlp(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=312, num_hid_layers=2)
 
     env.seed(workerseed)
     pposgd_simple.learn(env,
@@ -128,11 +178,11 @@ def train(num_timesteps, seed, model_file, save_model_with_prefix, restore_model
                         optim_stepsize=1e-3,
                         optim_batchsize=512,
                         optim_aux=1e-3,
-                        aux_batch_iters=1,
-                        aux_optim_epochs=4,
+                        aux_batch_iters=4,
+                        aux_optim_epochs=12,
                         gamma=0.999,
                         lam=0.9,
-                        beta=0.0012,
+                        beta=0.00012,
                         aux_iters=64,
                         schedule='linear',
                         save_model_with_prefix=save_model_with_prefix,

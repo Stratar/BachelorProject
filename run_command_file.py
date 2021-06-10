@@ -1,6 +1,7 @@
 import time
 import os
 import subprocess
+import sys
 
 # Every 3 hours a new process is started
 max_seconds = 10800
@@ -10,7 +11,12 @@ last_timestep = 0
 #Added a ton of timesteps
 max_timesteps = 1200000000
 
-num_proc = 1
+
+num_proc = 4
+if len(sys.argv)>2:
+    num_proc = int(sys.argv[2])
+test = int(sys.argv[1])
+
 
 '''d = {"one": [1, 2, 3, 4, 5], "two": [6, 7, 8, 9, 0]}
 print(d["one"])
@@ -49,9 +55,9 @@ except FileExistsError as e:
     print("Current model folder found! Will overwrite all data...\n")
 
 load_dir = f"../Results/{exp_model[:-5]}"
-args = ["mpirun", "-np", f"{num_proc}", "python", "main.py", "1", f"../models/{exp_model}", "0"]
+args = ["mpirun", "-np", f"{num_proc}", "python", "main_duo.py", "1", f"../models/{exp_model}", f"{test}"]
 if num_proc == 1:
-    args = ["python", "main.py", "1", f"../models/{exp_model}", "1"]
+    args = ["python", "main.py", "1", f"../models/{exp_model}", f"{test}"]
 
 proc = subprocess.Popen(args)
 
@@ -75,7 +81,7 @@ while last_timestep < max_timesteps:
             last_timestep = int(lines[-1])
 
         tstart = time.time()
-        args = ["mpirun", "-np", f"{num_proc}", "python", "main.py", "1", f"../models/{exp_model}"]
+        args = ["mpirun", "-np", f"{num_proc}", "python", "main_duo.py", "1", f"../models/{exp_model}", "0"]
         if num_proc == 1:
             args = ["python", "main_original.py", "1", f"../models/{exp_model}"]
 
